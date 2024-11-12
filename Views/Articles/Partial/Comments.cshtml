@@ -1,0 +1,19 @@
+@model IEnumerable<WebApplication1.Models.Comment>
+
+@if (Model.Any())
+{
+    <ul class="list-group">
+        @foreach (var comment in Model)
+        {
+            <li class="list-group-item">
+                <strong>@comment.AuthorId :</strong>
+                <p>@comment.Content</p>
+                <small>Posté le @comment.CreatedAt.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</small>
+            </li>
+        }
+    </ul>
+}
+else
+{
+    <p>Aucun commentaire pour le moment.</p>
+}

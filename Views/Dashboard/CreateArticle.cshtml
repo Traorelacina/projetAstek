@@ -1,0 +1,28 @@
+@model WebApplication1.Models.Article
+
+@{
+    ViewData["Title"] = "Créer un article";
+}
+
+<h1>@ViewData["Title"]</h1>
+
+<form asp-action="CreateArticle" method="post" enctype="multipart/form-data">
+    <div class="form-group">
+        <label for="Title">Titre</label>
+        <input type="text" name="Title" class="form-control" required />
+    </div>
+
+    <div class="form-group">
+        <label for="Content">Contenu</label>
+        <textarea name="Content" class="form-control" required></textarea>
+    </div>
+
+    <button type="submit" class="btn btn-primary">Créer l'article</button>
+</form>
+
+@if (TempData["SuccessMessage"] != null)
+{
+    <div class="alert alert-success">
+        @TempData["SuccessMessage"]
+    </div>
+}

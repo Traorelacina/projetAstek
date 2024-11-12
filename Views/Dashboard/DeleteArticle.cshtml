@@ -1,0 +1,16 @@
+@model Article
+@{
+    ViewData["Title"] = "Supprimer l'article";
+}
+
+<h2>Supprimer l'article</h2>
+<p>Êtes-vous sûr de vouloir supprimer cet article ?</p>
+
+<h3>@Model.Title</h3>
+<p>@Model.Content</p>
+
+<form asp-action="DeleteArticle" method="post">
+    <input type="hidden" asp-for="Id" />
+    <button type="submit" class="btn btn-danger">Oui, supprimer</button>
+    <a href="@Url.Action("Index")" class="btn btn-secondary">Annuler</a>
+</form>

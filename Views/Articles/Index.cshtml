@@ -1,0 +1,44 @@
+@model IEnumerable<WebApplication1.Models.Article>
+@{
+    ViewData["Title"] = "Liste des articles";
+}
+
+<h2>Liste des articles</h2>
+
+<table class="table table-bordered">
+    <thead>
+        <tr>
+            <th>Titre</th>
+            <th>Date de publication</th>
+            <th>Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var article in Model)
+        {
+            <tr>
+                <td>@article.Title</td>
+                <td>@article.CreatedAt.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</td>
+                <td>
+                    <a href="@Url.Action("Details", new { id = article.Id })" class="btn btn-info">Voir Détails</a>
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>
+
+<!-- Pagination -->
+@if (ViewBag.TotalPages > 1)
+{
+    <nav>
+        <ul class="pagination">
+            @for (int i = 1; i <= ViewBag.TotalPages; i++)
+            {
+                <li class="page-item @(i == ViewBag.CurrentPage ? "active" : "")">
+                    <a class="page-link" href="@Url.Action("Index", new { page = i })">@i</a>
+                </li>
+            }
+        </ul>
+    </nav>
+}
+

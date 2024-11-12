@@ -1,0 +1,20 @@
+@model WebApplication1.Models.Article
+
+@{
+    ViewData["Title"] = "Edit Article";
+}
+
+<h2>Edit Article</h2>
+
+<form asp-action="Edit" method="post">
+    <input type="hidden" name="Id" value="@Model.Id" />
+    <div class="form-group">
+        <label for="Title">Title</label>
+        <input type="text" id="Title" name="Title" class="form-control" value="@Model.Title" />
+    </div>
+    <div class="form-group">
+        <label for="Content">Content</label>
+        <textarea id="Content" name="Content" class="form-control">@Model.Content</textarea>
+    </div>
+    <button type="submit" class="btn btn-primary">Save Changes</button>
+</form>
