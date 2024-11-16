@@ -1,5 +1,9 @@
 html {
   font-size: 14px;
+  height: auto;
+  overflow-x: hidden;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch; /* Améliore le défilement sur iOS */
 }
 
 @media (min-width: 768px) {
@@ -20,3 +24,5 @@ html {
 body {
   margin-bottom: 60px;
 }
+.container-fluid {
+  padding: 0;}

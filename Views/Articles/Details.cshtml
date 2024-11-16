@@ -1,49 +1,183 @@
 @using WebApplication1.Models
+@using Microsoft.AspNetCore.Mvc.Rendering
 @model WebApplication1.Models.Article
+
 @{
     ViewData["Title"] = "Détails de l'article";
 }
 
-<h2>@Model.Title</h2>
-<p>@Model.Content</p>
-<p>Publié le @Model.CreatedAt.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</p>
+<style>
+    .article-container {
+        max-width: 800px;
+        margin: 2rem auto;
+        padding: 0 1rem;
+    }
 
-<!-- Section des likes -->
-<div>
-    <button id="like-button" class="btn btn-primary" onclick="toggleLike('@Model.Id')">J'aime</button>
-    <span id="likes-count">@ViewBag.LikesCount</span> j'aime(s)
+    .article-title {
+        font-size: 2.5rem;
+        color: #2d3748;
+        margin-bottom: 1.5rem;
+        font-weight: 700;
+        border-bottom: 3px solid #4299e1;
+        padding-bottom: 0.5rem;
+    }
+
+    .article-content {
+        font-size: 1.1rem;
+        line-height: 1.8;
+        color: #4a5568;
+        margin-bottom: 2rem;
+    }
+
+    .article-meta {
+        color: #718096;
+        font-style: italic;
+        margin-bottom: 2rem;
+    }
+
+    .image-container {
+        margin: 2rem 0;
+        border-radius: 8px;
+        overflow: hidden;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+
+    .image-container img {
+        width: 100%;
+        height: auto;
+        object-fit: cover;
+    }
+
+    .likes-section {
+        margin: 2rem 0;
+        padding: 1rem;
+        background-color: #f7fafc;
+        border-radius: 8px;
+    }
+
+    #like-button {
+        background-color: #4299e1;
+        border: none;
+        padding: 0.5rem 1.5rem;
+        border-radius: 25px;
+        transition: all 0.3s ease;
+    }
+
+    #like-button:hover {
+        background-color: #3182ce;
+        transform: translateY(-2px);
+    }
+
+    #likes-count {
+        margin-left: 1rem;
+        font-weight: 600;
+        color: #2d3748;
+    }
+
+    .comments-section {
+        margin-top: 3rem;
+    }
+
+    .comments-title {
+        font-size: 1.8rem;
+        font-weight: 600;
+    }
+
+    .comment {
+        margin: 1.5rem 0;
+        padding: 1rem;
+        background-color: #edf2f7;
+        border-radius: 8px;
+    }
+
+    .comment-author {
+        font-weight: 600;
+        color: #2d3748;
+    }
+
+    .comment-content {
+        font-size: 1rem;
+        color: #4a5568;
+        margin-top: 0.5rem;
+    }
+</style>
+
+
+<div class="article-container">
+    <!-- Titre de l'article -->
+    <div class="article-title">
+        @Model.Title
+    </div>
+
+    <!-- Métadonnées de l'article -->
+    <div class="article-meta">
+        @Model.AuthorFirstName | @Model.CreatedAt.ToLocalTime().ToString("dd MMM yyyy")
+    </div>
+
+    <!-- Contenu de l'article -->
+    <div class="article-content">
+        @Model.Content
+    </div>
+
+    <!-- Image de l'article (si disponible) -->
+    @if (!string.IsNullOrEmpty(Model.ImagePath))
+    {
+        <div class="image-container mb-4">
+            <img src="@Model.ImagePath" alt="Image de l'article" class="img-fluid">
+        </div>
+    }
+
+    <!-- Section des Likes -->
+    <div class="likes-section">
+        <button id="like-button" onclick="toggleLike('@Model.Id')">J'aime</button>
+        <span id="likes-count">@Model.LikesCount</span>
+    </div>
+
+    <!-- Section des commentaires -->
+    <div class="comments-section mt-4">
+        <h4>Commentaires</h4>
+
+        <!-- Affichage des commentaires -->
+       @Html.Partial("~/Views/Articles/Partial/Comments.cshtml", Model.Comments)
+
+
+        <!-- Formulaire d'ajout de commentaire -->
+        <form method="post" action="@Url.Action("AddComment", "Articles")">
+            @Html.AntiForgeryToken()
+            <input type="hidden" name="articleId" value="@Model.Id" />
+            <textarea name="content" placeholder="Ajouter un commentaire..." class="form-control mb-3" rows="3" required></textarea>
+            <button type="submit" class="btn btn-primary">Envoyer</button>
+        </form>
+    </div>
 </div>
 
-<hr />
 
-<!-- Section des commentaires -->
-<h3>Commentaires</h3>
-@await Html.PartialAsync("Partial/Comments", (IEnumerable<Comment>)ViewBag.Comments)
-
-<form asp-action="AddComment" method="post">
-    @Html.AntiForgeryToken()
-    <input type="hidden" name="articleId" value="@Model.Id" />
-    <div class="form-group">
-        <textarea name="content" class="form-control" rows="3" placeholder="Ajouter un commentaire..." required></textarea>
-    </div>
-    <button type="submit" class="btn btn-success">Ajouter un commentaire</button>
-</form>
-
-@section Scripts {
 <script>
-    async function toggleLike(articleId) {
+    function toggleLike(articleId) {
+        // Récupérer le token anti-forgery
         const token = document.querySelector('input[name="__RequestVerificationToken"]').value;
-        const response = await fetch('@Url.Action("ToggleLike")', {
+
+        fetch(`/Articles/ToggleLike`, {
             method: 'POST',
             headers: {
-                'Content-Type': 'application/json',
+                'Content-Type': 'application/x-www-form-urlencoded',
                 'RequestVerificationToken': token
             },
-            body: JSON.stringify({ articleId })
+            body: `articleId=${articleId}`
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Network response was not ok');
+            }
+            return response.json();
+        })
+        .then(data => {
+            // Mettre à jour le compteur de likes
+            const likeCount = document.querySelector("#likes-count");
+            likeCount.textContent = data.likesCount;
+        })
+        .catch(error => {
+            console.error('Error:', error);
         });
-
-        const result = await response.json();
-        document.getElementById('likes-count').innerText = result.likesCount;
     }
 </script>
-}

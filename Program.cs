@@ -1,33 +1,30 @@
+using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Microsoft.OpenApi.Models;
 using MongoDB.Driver;
+using WebApplication1.Hubs;
 using WebApplication1.Models;
-using Microsoft.Extensions.Options;
 using WebApplication1.Services;
 using WebApplication1.Settings;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
-builder.Services.AddControllersWithViews();
-builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen(c =>
-{
-    c.SwaggerDoc("v1", new OpenApiInfo { Title = "Your API", Version = "v1" });
-});
-
-// Configure MongoDB settings
+// Configuration de MongoDB
 builder.Services.Configure<MongoDBSettings>(builder.Configuration.GetSection("MongoDBSettings"));
-builder.Services.AddSingleton<IMongoDBSettings>(sp => 
-    sp.GetRequiredService<IOptions<MongoDBSettings>>().Value);
+builder.Services.AddSingleton<IMongoDBSettings>(sp =>
+    sp.GetRequiredService<Microsoft.Extensions.Options.IOptions<MongoDBSettings>>().Value);
 
-// Register MongoClient and IMongoDatabase
+// Client MongoDB
 builder.Services.AddSingleton<IMongoClient>(sp =>
 {
     var settings = sp.GetRequiredService<IMongoDBSettings>();
     return new MongoClient(settings.ConnectionString);
 });
 
+// Base de données MongoDB
 builder.Services.AddSingleton<IMongoDatabase>(sp =>
 {
     var client = sp.GetRequiredService<IMongoClient>();
@@ -35,50 +32,49 @@ builder.Services.AddSingleton<IMongoDatabase>(sp =>
     return client.GetDatabase(settings.DatabaseName);
 });
 
-// Ajout des collections MongoDB
-builder.Services.AddScoped<IMongoCollection<Article>>(sp =>
+builder.Services.AddSingleton<IMongoCollection<Article>>(sp =>
 {
     var database = sp.GetRequiredService<IMongoDatabase>();
-    return database.GetCollection<Article>("Articles");
+    return database.GetCollection<Article>("Articles");  // Assurez-vous que le nom de la collection est correct
 });
 
-// Ajout de la collection Comment
-builder.Services.AddScoped<IMongoCollection<Comment>>(sp =>
+
+
+// Service MongoDbService
+builder.Services.AddScoped<MongoDbService>();
+
+// Ajout de Swagger pour l'API
+builder.Services.AddControllersWithViews();
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerGen(c =>
 {
-    var database = sp.GetRequiredService<IMongoDatabase>();
-    return database.GetCollection<Comment>("Comments");
+    c.SwaggerDoc("v1", new OpenApiInfo { Title = "Your API", Version = "v1" });
 });
 
-// Ajout de la collection Like
-builder.Services.AddScoped<IMongoCollection<Like>>(sp =>
-{
-    var database = sp.GetRequiredService<IMongoDatabase>();
-    return database.GetCollection<Like>("Likes");
-});
-
-// Register MongoDbService
-builder.Services.AddSingleton<MongoDbService>();
-
-// Configure Identity with MongoDB store for users and roles
+// Ajout de Identity
 builder.Services.AddIdentity<ApplicationUser, IdentityRole>()
-    .AddUserStore<MongoUserStore>()
-    .AddRoleStore<MongoRoleStore>()
+    .AddUserStore<MongoUserStore>() // Vérifiez que MongoUserStore est bien défini
+    .AddRoleStore<MongoRoleStore>() // Vérifiez que MongoRoleStore est bien défini
     .AddDefaultTokenProviders();
 
-// Add authentication
 builder.Services.AddAuthentication(options =>
 {
     options.DefaultAuthenticateScheme = IdentityConstants.ApplicationScheme;
     options.DefaultChallengeScheme = IdentityConstants.ApplicationScheme;
 });
 
-// Add authorization
-builder.Services.AddAuthorization();
+// Politique d'autorisation
+builder.Services.AddAuthorization(options =>
+{
+    options.AddPolicy("UserOnly", policy => policy.RequireRole("User"));
+});
 
-// Build the application
+// SignalR pour les notifications en temps réel
+builder.Services.AddSignalR();
+
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
+// Swagger en mode développement
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
@@ -87,14 +83,18 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 app.UseStaticFiles();
+
 app.UseRouting();
+
+// Authentification et autorisation
 app.UseAuthentication();
 app.UseAuthorization();
 
+// Configuration des points de terminaison
 app.MapControllerRoute(
     name: "default",
     pattern: "{controller=Home}/{action=Index}/{id?}");
 
-app.MapControllers();
+app.MapHub<NotificationHub>("/notificationHub");
 
 app.Run();

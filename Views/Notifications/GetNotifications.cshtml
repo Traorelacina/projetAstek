@@ -1,0 +1,71 @@
+@model IEnumerable<WebApplication1.Models.Notification>
+
+@{
+    ViewData["Title"] = "Mes Notifications";
+}
+
+<h2>Notifications</h2>
+
+@if (Model != null && Model.Any())
+{
+    <ul id="notifications-list" class="list-group mb-4">
+        @foreach (var notification in Model)
+        {
+            <li class="list-group-item">
+                <p>@notification.Message</p>
+                <small class="text-muted">@notification.CreatedAt.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</small>
+            </li>
+        }
+    </ul>
+}
+else
+{
+    <p class="text-muted">Aucune notification pour le moment.</p>
+}
+
+@section Scripts {
+    <!-- Inclure SignalR -->
+    <script src="~/lib/signalr/signalr.min.js"></script> 
+    
+    <script>
+        // Initialisation de la connexion SignalR
+        const connection = new signalR.HubConnectionBuilder()
+            .withUrl("/notificationHub")
+            .configureLogging(signalR.LogLevel.Information)
+            .build();
+
+        // Fonction pour afficher les nouvelles notifications
+        connection.on("ReceiveNotification", function (message) {
+            const list = document.getElementById("notifications-list");
+
+            if (list) {
+                const newItem = document.createElement("li");
+                newItem.classList.add("list-group-item");
+                newItem.innerHTML = `<p>${message}</p><small class="text-muted">${new Date().toLocaleString()}</small>`;
+                
+                // Ajouter la nouvelle notification en haut de la liste
+                list.prepend(newItem);
+            }
+        });
+
+        // Démarrer la connexion
+        async function startConnection() {
+            try {
+                await connection.start();
+                console.log("Connexion SignalR établie");
+            } catch (err) {
+                console.error("Erreur lors de la connexion à SignalR : ", err);
+                setTimeout(startConnection, 5000); // Tenter de se reconnecter après 5 secondes
+            }
+        }
+
+        // Lancer la connexion
+        startConnection();
+
+        // Gérer la reconnexion en cas de déconnexion
+        connection.onclose(async () => {
+            console.warn("Connexion SignalR perdue. Tentative de reconnexion...");
+            await startConnection();
+        });
+    </script>
+}

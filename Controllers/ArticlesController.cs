@@ -1,112 +1,187 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
-using MongoDB.Driver;
+using Microsoft.AspNetCore.SignalR;
+using System.IO;
 using System.Security.Claims;
+using System.Threading.Tasks;
+using WebApplication1.Hubs;
 using WebApplication1.Models;
+using WebApplication1.Services;
 
 namespace WebApplication1.Controllers
 {
     [Authorize]
-   public class ArticlesController : Controller
-{
-    private readonly IMongoCollection<Article> _articleCollection;
-    private readonly IMongoCollection<Comment> _commentCollection;
-    private readonly IMongoCollection<Like> _likeCollection;
-
-    public ArticlesController(IMongoCollection<Article> articleCollection, IMongoCollection<Comment> commentCollection, IMongoCollection<Like> likeCollection)
+    public class ArticlesController : Controller
     {
-        _articleCollection = articleCollection;
-        _commentCollection = commentCollection;
-        _likeCollection = likeCollection;
-    }
+        private readonly MongoDbService _mongoDbService;
+        private readonly IHubContext<NotificationHub> _hubContext;
+        private readonly UserManager<ApplicationUser> _userManager;
 
-    public async Task<IActionResult> Index(int page = 1)
-    {
-        const int pageSize = 10;
-        var articles = await _articleCollection
-            .Find(_ => true)
-            .SortByDescending(a => a.CreatedAt)
-            .Skip((page - 1) * pageSize)
-            .Limit(pageSize)
-            .ToListAsync();
-
-        ViewBag.CurrentPage = page;
-        ViewBag.TotalPages = Math.Ceiling((double)await _articleCollection.CountDocumentsAsync(_ => true) / pageSize);
-
-        return View(articles);
-    }
-
-    public async Task<IActionResult> Details(string id)
-    {
-        if (string.IsNullOrEmpty(id)) return NotFound();
-
-        var article = await _articleCollection
-            .Find(a => a.Id == id)
-            .FirstOrDefaultAsync();
-
-        if (article == null) return NotFound();
-
-        var comments = await _commentCollection
-            .Find(c => c.ArticleId == id)
-            .SortByDescending(c => c.CreatedAt)
-            .ToListAsync();
-
-        ViewBag.Comments = comments;
-        ViewBag.LikesCount = await _likeCollection.CountDocumentsAsync(l => l.ArticleId == id);
-
-        return View(article);
-    }
-
-    [HttpPost]
-    public async Task<IActionResult> AddComment(string articleId, string content)
-    {
-        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-        if (string.IsNullOrEmpty(articleId) || string.IsNullOrEmpty(content)) return BadRequest();
-
-#pragma warning disable CS8601 // Existence possible d'une assignation de référence null.
-            var comment = new Comment
+        public ArticlesController(
+            MongoDbService mongoDbService,
+            IHubContext<NotificationHub> hubContext,
+            UserManager<ApplicationUser> userManager)
         {
-            ArticleId = articleId,
-            Content = content,
-            AuthorId = userId,
-            CreatedAt = DateTime.UtcNow
-        };
-#pragma warning restore CS8601 // Existence possible d'une assignation de référence null.
-
-            await _commentCollection.InsertOneAsync(comment);
-        return RedirectToAction("Details", new { id = articleId });
-    }
-
-    [HttpPost]
-    public async Task<IActionResult> ToggleLike(string articleId)
-    {
-        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-
-        var like = await _likeCollection
-            .Find(l => l.ArticleId == articleId && l.UserId == userId)
-            .FirstOrDefaultAsync();
-
-        if (like != null)
-        {
-            await _likeCollection.DeleteOneAsync(l => l.Id == like.Id);
+            _mongoDbService = mongoDbService;
+            _hubContext = hubContext;
+            _userManager = userManager;
         }
-        else
+
+        // Afficher la page de création d'article
+        [HttpGet]
+        public IActionResult CreateArticle()
         {
-#pragma warning disable CS8601 // Existence possible d'une assignation de référence null.
-                like = new Like
+            return View();
+        }
+
+        // Gérer la création d'un article avec téléchargement d'image
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> CreateArticle(Article article, IFormFile? imageFile)
+        {
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            var user = await _userManager.FindByIdAsync(userId);
+            if (user == null) return Unauthorized();
+
+            // Assigner les informations de l'auteur
+            article.AuthorId = userId;
+            article.AuthorFirstName = user.FirstName ?? "Inconnu";
+            article.CreatedAt = DateTime.UtcNow;
+
+            // Gestion du téléchargement d'image
+            if (imageFile != null && imageFile.Length > 0)
+            {
+                if (imageFile.ContentType.StartsWith("image/"))
+                {
+                    string uploadDir = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "images");
+                    Directory.CreateDirectory(uploadDir);
+
+                    // Générer un nom de fichier unique pour éviter les collisions
+                    string fileName = $"{Path.GetFileNameWithoutExtension(imageFile.FileName)}_{Guid.NewGuid()}{Path.GetExtension(imageFile.FileName)}";
+                    string filePath = Path.Combine(uploadDir, fileName);
+
+                    using (var stream = new FileStream(filePath, FileMode.Create))
+                    {
+                        await imageFile.CopyToAsync(stream);
+                    }
+
+                    article.ImagePath = $"/images/{fileName}";
+                }
+                else
+                {
+                    ModelState.AddModelError("imageFile", "Le fichier doit être une image.");
+                    return View(article);
+                }
+            }
+
+            if (!ModelState.IsValid)
+            {
+                return View(article);
+            }
+
+            // Sauvegarder l'article dans MongoDB
+            await _mongoDbService.CreateArticleAsync(article);
+            TempData["SuccessMessage"] = "Article créé avec succès !";
+            return RedirectToAction("Index");
+        }
+
+        // Afficher la liste des articles
+        [HttpGet]
+        public async Task<IActionResult> Index()
+        {
+            var articles = await _mongoDbService.GetAllArticlesAsync();
+            return View(articles);
+        }
+
+        // Afficher les détails d'un article
+        [HttpGet]
+        public async Task<IActionResult> Details(string id)
+        {
+            var article = await _mongoDbService.GetArticleByIdAsync(id);
+            if (article == null) return NotFound();
+
+            var comments = await _mongoDbService.GetCommentsByArticleIdAsync(id);
+            ViewBag.Comments = comments;
+            return View(article);
+        }
+
+        // Ajouter un commentaire
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> AddComment(string articleId, string content)
+        {
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            var user = await _userManager.FindByIdAsync(userId);
+            var article = await _mongoDbService.GetArticleByIdAsync(articleId);
+
+            if (article == null || user == null) return NotFound();
+
+            var comment = new Comment
             {
                 ArticleId = articleId,
-                UserId = userId,
+                AuthorId = userId,
+                AuthorFirstName = user.FirstName ?? User.Identity?.Name,
+                Content = content,
                 CreatedAt = DateTime.UtcNow
             };
-#pragma warning restore CS8601 // Existence possible d'une assignation de référence null.
-                await _likeCollection.InsertOneAsync(like);
+
+            await _mongoDbService.CreateCommentAsync(comment);
+
+            if (article.AuthorId != userId)
+            {
+                await _hubContext.Clients.User(article.AuthorId)
+                    .SendAsync("ReceiveNotification", $"{User.Identity?.Name} a commenté votre article");
+
+                var notification = new Notification
+                {
+                    UserId = article.AuthorId,
+                    Message = $"{User.Identity?.Name} a commenté votre article",
+                    CreatedAt = DateTime.UtcNow,
+                    Type = "Commentaire",
+                    IsRead = false
+                };
+                await _mongoDbService.SaveNotificationAsync(notification);
+            }
+
+            return RedirectToAction("Details", new { id = articleId });
         }
 
-        var likesCount = await _likeCollection.CountDocumentsAsync(l => l.ArticleId == articleId);
-        return Json(new { likesCount });
-    }
-}
+        // Gérer les likes
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> ToggleLike(string articleId)
+        {
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            var article = await _mongoDbService.GetArticleByIdAsync(articleId);
 
+            if (article == null) return NotFound();
+
+            // Utiliser la méthode ToggleLikeAsync
+            await _mongoDbService.ToggleLikeAsync(articleId, userId);
+
+            // Récupérer le nombre de likes mis à jour
+            var likesCount = await _mongoDbService.GetLikesCountByArticleIdAsync(articleId);
+
+            // Envoyer une notification si l'article a un autre auteur
+            if (article.AuthorId != userId)
+            {
+                await _hubContext.Clients.User(article.AuthorId)
+                    .SendAsync("ReceiveNotification", $"{User.Identity?.Name} a aimé votre article");
+
+                var notification = new Notification
+                {
+                    UserId = article.AuthorId,
+                    Message = $"{User.Identity?.Name} a aimé votre article",
+                    CreatedAt = DateTime.UtcNow,
+                    Type = "Like",
+                    IsRead = false
+                };
+                await _mongoDbService.SaveNotificationAsync(notification);
+            }
+
+            // Retourner le nombre de likes mis à jour en JSON
+            return Json(new { likesCount });
+        }
+    }
 }

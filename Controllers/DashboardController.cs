@@ -3,7 +3,6 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using WebApplication1.Models;
 using MongoDB.Driver;
-
 namespace WebApplication1.Controllers
 {
     [Authorize]
@@ -11,13 +10,11 @@ namespace WebApplication1.Controllers
     {
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly IMongoCollection<Article> _articleCollection;
-
         public DashboardController(UserManager<ApplicationUser> userManager, IMongoCollection<Article> articleCollection)
         {
             _userManager = userManager;
             _articleCollection = articleCollection;
         }
-
         // Action pour afficher le tableau de bord
         public async Task<IActionResult> Index()
         {
@@ -26,11 +23,9 @@ namespace WebApplication1.Controllers
             {
                 return NotFound("Utilisateur non trouvé");
             }
-
             var articles = await _articleCollection
                 .Find(a => a.AuthorId == user.Id)
                 .ToListAsync();
-
             var viewModel = new DashboardViewModel
             {
                 Profile = new ProfileViewModel
@@ -41,16 +36,13 @@ namespace WebApplication1.Controllers
                 },
                 Articles = articles
             };
-
             return View(viewModel);
         }
-
         // Action pour afficher le formulaire de création d'article
         public IActionResult CreateArticle()
         {
             return View();
         }
-
         // Action pour traiter le formulaire de création d'article
         [HttpPost]
         [ValidateAntiForgeryToken]
@@ -63,10 +55,8 @@ namespace WebApplication1.Controllers
                 {
                     return Unauthorized("Utilisateur non authentifié");
                 }
-
                 article.AuthorId = user.Id; // Assigner l'ID de l'utilisateur connecté
                 article.CreatedAt = DateTime.UtcNow; // Ajouter la date de création
-
                 try
                 {
                     await _articleCollection.InsertOneAsync(article); // Enregistrer l'article dans MongoDB
@@ -80,26 +70,21 @@ namespace WebApplication1.Controllers
                     return View(article);
                 }
             }
-
             // Si le modèle est invalide, afficher les erreurs dans la vue
             return View(article);
         }
-
         // Action pour afficher le formulaire d'édition d'article
         public async Task<IActionResult> EditArticle(string id)
         {
             var article = await _articleCollection
                 .Find(a => a.Id == id)
                 .FirstOrDefaultAsync();
-
             if (article == null)
             {
                 return NotFound("Article non trouvé");
             }
-
             return View(article);
         }
-
         // Action pour traiter le formulaire d'édition d'article
         [HttpPost]
         [ValidateAntiForgeryToken]
@@ -109,22 +94,18 @@ namespace WebApplication1.Controllers
             {
                 return NotFound("Article non trouvé");
             }
-
             if (ModelState.IsValid)
             {
                 var existingArticle = await _articleCollection
                     .Find(a => a.Id == id)
                     .FirstOrDefaultAsync();
-
                 if (existingArticle == null)
                 {
                     return NotFound("Article non trouvé");
                 }
-
                 existingArticle.Title = article.Title;
                 existingArticle.Content = article.Content;
                 existingArticle.UpdatedAt = DateTime.UtcNow; // Mettre à jour la date de modification
-
                 try
                 {
                     await _articleCollection.ReplaceOneAsync(a => a.Id == id, existingArticle);
@@ -137,10 +118,8 @@ namespace WebApplication1.Controllers
                     return View(article);
                 }
             }
-
             return View(article); // Renvoyer à la vue si le modèle est invalide
         }
-
         // Action pour supprimer un article
         [HttpPost]
         [ValidateAntiForgeryToken]
@@ -149,12 +128,10 @@ namespace WebApplication1.Controllers
             var article = await _articleCollection
                 .Find(a => a.Id == id)
                 .FirstOrDefaultAsync();
-
             if (article == null)
             {
                 return NotFound("Article non trouvé");
             }
-
             try
             {
                 await _articleCollection.DeleteOneAsync(a => a.Id == id);
@@ -165,7 +142,6 @@ namespace WebApplication1.Controllers
                 // Si une erreur survient lors de la suppression dans MongoDB
                 TempData["ErrorMessage"] = "Une erreur est survenue lors de la suppression de l'article : " + ex.Message;
             }
-
             return RedirectToAction(nameof(Index)); // Rediriger vers la liste des articles
         }
     }

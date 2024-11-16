@@ -4,25 +4,57 @@
     ViewData["Title"] = "Créer un article";
 }
 
-<h1>@ViewData["Title"]</h1>
+<div class="container mt-5">
+    <h1 class="mb-4 text-center">@ViewData["Title"]</h1>
 
-<form asp-action="CreateArticle" method="post" enctype="multipart/form-data">
-    <div class="form-group">
-        <label for="Title">Titre</label>
-        <input type="text" name="Title" class="form-control" required />
-    </div>
+    <!-- Afficher le message de succès si un article est créé avec succès -->
+    @if (TempData["SuccessMessage"] != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            @TempData["SuccessMessage"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    }
 
-    <div class="form-group">
-        <label for="Content">Contenu</label>
-        <textarea name="Content" class="form-control" required></textarea>
-    </div>
+    <!-- Afficher les erreurs de validation globales si le modèle n'est pas valide -->
+    @if (!ViewData.ModelState.IsValid)
+    {
+        <div class="alert alert-danger" role="alert">
+            Veuillez corriger les erreurs ci-dessous avant de soumettre le formulaire.
+        </div>
+    }
 
-    <button type="submit" class="btn btn-primary">Créer l'article</button>
-</form>
+    <!-- Formulaire pour créer un article -->
+    <form asp-action="CreateArticle" method="post" enctype="multipart/form-data" class="card p-4 shadow-sm">
+        @Html.AntiForgeryToken()
 
-@if (TempData["SuccessMessage"] != null)
-{
-    <div class="alert alert-success">
-        @TempData["SuccessMessage"]
-    </div>
+        <div class="mb-3">
+            <label for="Title" class="form-label fw-bold">Titre</label>
+            <input type="text" asp-for="Title" class="form-control" placeholder="Entrez le titre de l'article" />
+            <span asp-validation-for="Title" class="text-danger"></span>
+        </div>
+
+        <div class="mb-3">
+            <label for="Content" class="form-label fw-bold">Contenu</label>
+            <textarea asp-for="Content" class="form-control" rows="6" placeholder="Rédigez le contenu de votre article"></textarea>
+            <span asp-validation-for="Content" class="text-danger"></span>
+        </div>
+
+        <div class="mb-3">
+            <label for="imageFile" class="form-label fw-bold">Image</label>
+            <input type="file" class="form-control" name="imageFile" accept="image/*" />
+            @if (ViewData.ModelState["imageFile"] != null)
+            {
+                <span class="text-danger">@ViewData.ModelState["imageFile"].Errors[0].ErrorMessage</span>
+            }
+        </div>
+
+        <div class="d-flex justify-content-end">
+            <button type="submit" class="btn btn-primary">Créer l'article</button>
+        </div>
+    </form>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
 }

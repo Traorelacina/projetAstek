@@ -1,4 +1,156 @@
-@model WebApplication1.Models.ProfileViewModel
+@model WebApplication1.Models.UpdateProfileViewModel
+
+<style>
+/* Styles généraux de la page */
+.container {
+    max-width: 1200px;
+    margin: 2rem auto;
+    padding: 0 1.5rem;
+}
+
+/* Titre principal */
+h2 {
+    color: #2D3748;
+    font-size: 2rem;
+    font-weight: 700;
+    margin-bottom: 2rem;
+    position: relative;
+    padding-bottom: 0.5rem;
+}
+
+h2::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 60px;
+    height: 4px;
+    background: linear-gradient(135deg, #4299e1, #3182ce);
+    border-radius: 2px;
+}
+
+/* Styles des alertes */
+.alert {
+    border-radius: 8px;
+    padding: 1rem 1.5rem;
+    margin-bottom: 2rem;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.alert-success {
+    background-color: #C6F6D5;
+    border: 1px solid #9AE6B4;
+    color: #22543D;
+}
+
+.alert-danger {
+    background-color: #FED7D7;
+    border: 1px solid #FEB2B2;
+    color: #822727;
+}
+
+.alert ul {
+    margin: 0;
+    padding-left: 1.5rem;
+}
+
+.alert li {
+    margin-bottom: 0.5rem;
+}
+
+/* Styles de la carte de profil */
+.card {
+    background: white;
+    border-radius: 16px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05), 
+                0 10px 15px -3px rgba(0, 0, 0, 0.1);
+    border: none;
+    overflow: hidden;
+    transition: transform 0.2s ease;
+}
+
+.card:hover {
+    transform: translateY(-2px);
+}
+
+.card-body {
+    padding: 2rem;
+}
+
+/* Styles des groupes de formulaire */
+.form-group {
+    margin-bottom: 1.5rem;
+}
+
+.form-label {
+    display: block;
+    color: #718096;
+    font-size: 0.875rem;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.form-control-static {
+    color: #2D3748;
+    font-size: 1rem;
+    padding: 0.5rem 0;
+    border-bottom: 1px solid #E2E8F0;
+    margin: 0;
+}
+
+/* Style du bouton */
+.btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.75rem 1.5rem;
+    border-radius: 8px;
+    font-weight: 600;
+    text-decoration: none;
+    transition: all 0.2s ease;
+    cursor: pointer;
+    border: none;
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, #4299e1, #3182ce);
+    color: white;
+    box-shadow: 0 4px 6px rgba(66, 153, 225, 0.2);
+}
+
+.btn-primary:hover {
+    background: linear-gradient(135deg, #3182ce, #2c5282);
+    transform: translateY(-1px);
+    box-shadow: 0 6px 8px rgba(66, 153, 225, 0.3);
+}
+
+/* Media Queries pour le responsive */
+
+    .container {
+        padding: 0 1rem;
+    }
+
+    .card-body {
+        padding: 1.5rem;
+    }
+
+    h2 {
+        font-size: 1.5rem;
+    }
+
+    .btn {
+        width: 100%;
+    }
+}
+
+
+
+.alert {
+    animation: slideIn 0.3s ease forwards;
+}
+</style>
 
 <h2>Mon Profil</h2>
 
@@ -26,6 +178,20 @@
         <div class="col-md-8">
             <div class="card">
                 <div class="card-body">
+                    @* Afficher la photo de profil *@
+                    @if (!string.IsNullOrEmpty(Model.ProfilePicture))
+                    {
+                        <div class="mb-4 text-center">
+                            <img src="@Model.ProfilePicture" alt="Photo de profil" class="rounded-circle" style="width: 150px; height: 150px; object-fit: cover;">
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="mb-4 text-center">
+                            <img src="~/images/logo_profil.png" alt="Photo de profil par défaut" class="rounded-circle" style="width: 150px; height: 150px; object-fit: cover;">
+                        </div>
+                    }
+
                     <div class="form-group mb-3">
                         <label class="form-label">Prénom</label>
                         <p class="form-control-static">@Model.FirstName</p>

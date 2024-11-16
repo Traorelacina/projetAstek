@@ -3,42 +3,154 @@
     ViewData["Title"] = "Liste des articles";
 }
 
-<h2>Liste des articles</h2>
+<style>
+    .articles-container {
+        max-width: 1200px;
+        margin: 2rem auto;
+        padding: 0 1rem;
+    }
 
-<table class="table table-bordered">
-    <thead>
-        <tr>
-            <th>Titre</th>
-            <th>Date de publication</th>
-            <th>Actions</th>
-        </tr>
-    </thead>
-    <tbody>
+    .page-title {
+        color: #2d3748;
+        font-size: 2.25rem;
+        font-weight: 700;
+        margin-bottom: 2rem;
+        padding-bottom: 0.5rem;
+        border-bottom: 3px solid #4299e1;
+    }
+
+    .articles-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+        gap: 2rem;
+        margin-bottom: 3rem;
+    }
+
+    .article-card {
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+        overflow: hidden;
+    }
+
+    .article-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 8px 15px rgba(0, 0, 0, 0.1);
+    }
+
+    .article-image {
+        width: 100%;
+        height: 200px;
+        object-fit: cover;
+        border-bottom: 2px solid #e2e8f0;
+    }
+
+    .article-content {
+        padding: 1.5rem;
+    }
+
+    .article-title {
+        color: #2d3748;
+        font-size: 1.25rem;
+        font-weight: 600;
+        margin-bottom: 0.75rem;
+        line-height: 1.4;
+    }
+
+    .article-date {
+        color: #718096;
+        font-size: 0.875rem;
+        margin-bottom: 1rem;
+    }
+
+    .article-link {
+        display: inline-block;
+        background-color: #4299e1;
+        color: white;
+        padding: 0.5rem 1.5rem;
+        border-radius: 25px;
+        text-decoration: none;
+        transition: background-color 0.3s ease;
+    }
+
+    .article-link:hover {
+        background-color: #3182ce;
+        color: white;
+    }
+
+    /* Pagination styles */
+    .pagination {
+        display: flex;
+        justify-content: center;
+        gap: 0.5rem;
+        margin-top: 2rem;
+    }
+
+    .page-item {
+        list-style: none;
+    }
+
+    .page-link {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        color: #4a5568;
+        background-color: white;
+        border: 2px solid #e2e8f0;
+        text-decoration: none;
+        transition: all 0.3s ease;
+    }
+
+    .page-item.active .page-link {
+        background-color: #4299e1;
+        color: white;
+        border-color: #4299e1;
+    }
+
+    .page-link:hover:not(.active) {
+        background-color: #f7fafc;
+        border-color: #4299e1;
+    }
+
+   
+</style>
+
+<div class="articles-container">
+    <h2 class="page-title">Liste des articles</h2>
+
+    <div class="articles-grid">
         @foreach (var article in Model)
         {
-            <tr>
-                <td>@article.Title</td>
-                <td>@article.CreatedAt.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</td>
-                <td>
-                    <a href="@Url.Action("Details", new { id = article.Id })" class="btn btn-info">Voir Détails</a>
-                </td>
-            </tr>
+            <article class="article-card">
+                @if (!string.IsNullOrEmpty(article.ImagePath))
+                {
+                    <img src="@article.ImagePath" alt="Image de l'article" class="article-image" />
+                }
+                <!-- Pas d'image par défaut à afficher -->
+                <div class="article-content">
+                    <h3 class="article-title">@article.Title</h3>
+                    <p class="article-date">Publié le @article.CreatedAt.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</p>
+                    <a href="@Url.Action("Details", new { id = article.Id })" class="article-link">Voir Détails</a>
+                </div>
+            </article>
         }
-    </tbody>
-</table>
+    </div>
 
-<!-- Pagination -->
-@if (ViewBag.TotalPages > 1)
-{
-    <nav>
-        <ul class="pagination">
-            @for (int i = 1; i <= ViewBag.TotalPages; i++)
-            {
-                <li class="page-item @(i == ViewBag.CurrentPage ? "active" : "")">
-                    <a class="page-link" href="@Url.Action("Index", new { page = i })">@i</a>
-                </li>
-            }
-        </ul>
-    </nav>
-}
-
+    @if (ViewBag.TotalPages > 1)
+    {
+        <nav>
+            <ul class="pagination">
+                @for (int i = 1; i <= ViewBag.TotalPages; i++)
+                {
+                    <li class="page-item @(i == ViewBag.CurrentPage ? "active" : "")">
+                        <a class="page-link" href="@Url.Action("Index", new { page = i })">@i</a>
+                    </li>
+                }
+            </ul>
+        </nav>
+    }
+</div>

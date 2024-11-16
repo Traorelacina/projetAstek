@@ -3,40 +3,324 @@
     ViewData["Title"] = "Tableau de bord";
 }
 
-<h2>Bienvenue, @Model.Profile.FirstName</h2>
-
-
-@if (TempData["SuccessMessage"] != null)
-{
-    <div class="alert alert-success">@TempData["SuccessMessage"]</div>
+<style>
+    /* Conteneur principal */
+.dashboard-container {
+    max-width: 1200px;
+    margin: 2rem auto;
+    padding: 0 1.5rem;
+    background-color: #92a8d1;
 }
 
-<h3>Vos articles</h3>
+/* Section de bienvenue */
+.welcome-section {
+    background: linear-gradient(135deg, #2B6CB0, #2C5282);
+    color: white;
+    padding: 2rem;
+    border-radius: 12px;
+    margin-bottom: 2rem;
+    box-shadow: 0 8px 15px rgba(0, 0, 0, 0.1);
+    text-align: center;
+}
 
-<table class="table table-bordered">
-    <thead>
-        <tr>
-            <th>Titre</th>
-            <th>Date de création</th>
-            <th>Actions</th>
-        </tr>
-    </thead>
-    <tbody>
-        @foreach (var article in Model.Articles)
-        {
-            <tr>
-                <td>@article.Title</td>
-                <td>@article.CreatedAt.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</td>
-                <td>
-                    <a href="@Url.Action("EditArticle", new { id = article.Id })" class="btn btn-warning">Modifier</a>
-                    <form asp-action="DeleteArticle" method="post" style="display:inline;">
-                        <input type="hidden" name="id" value="@article.Id" />
-                        <button type="submit" class="btn btn-danger" onclick="return confirm('Voulez-vous vraiment supprimer cet article ?')">Supprimer</button>
-                    </form>
-                </td>
-            </tr>
-        }
-    </tbody>
-</table>
+.welcome-title {
+    font-size: 2.5rem;
+    margin: 0;
+    font-weight: 700;
+}
 
-<a href="@Url.Action("CreateArticle")" class="btn btn-primary">Créer un nouvel article</a>
+/* Grille des fonctionnalités */
+.features-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+.feature-card {
+    background: #ffffff;
+    border-radius: 16px;
+    padding: 1.5rem;
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.05);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    cursor: pointer;
+}
+
+.feature-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+}
+
+.feature-icon {
+    background: #EDF2F7;
+    color: #3182CE;
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 1rem;
+    font-size: 1.5rem;
+}
+
+.feature-title {
+    color: #2D3748;
+    font-size: 1.5rem;
+    font-weight: 600;
+}
+
+.feature-description {
+    color: #4A5568;
+    line-height: 1.6;
+}
+
+/* Guide de démarrage rapide */
+.quick-start {
+    background: #F7FAFC;
+    border-radius: 12px;
+    padding: 1.5rem;
+    border: 1px solid #E2E8F0;
+    margin-bottom: 2rem;
+}
+
+.quick-start-title {
+    font-size: 1.5rem;
+    font-weight: 600;
+    margin-bottom: 1rem;
+}
+
+.steps-list {
+    list-style: none;
+    padding: 0;
+}
+
+.steps-list li {
+    display: flex;
+    align-items: flex-start;
+    margin-bottom: 1rem;
+    color: #4A5568;
+}
+
+.step-number {
+    background: #3182CE;
+    color: white;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: 1rem;
+    flex-shrink: 0;
+    font-weight: bold;
+}
+
+/* Section des articles */
+.articles-section {
+    background: white;
+    border-radius: 12px;
+    padding: 1.5rem;
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.05);
+}
+
+.section-title {
+    color: #2D3748;
+    font-size: 1.75rem;
+    font-weight: 600;
+    margin-bottom: 1.5rem;
+}
+
+.articles-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.articles-table th,
+.articles-table td {
+    padding: 0.75rem;
+    text-align: left;
+    border-bottom: 1px solid #E2E8F0;
+}
+
+.articles-table th {
+    background-color: #F7FAFC;
+    color: #4A5568;
+}
+
+.articles-table tr:hover {
+    background-color: #F7FAFC;
+}
+
+.action-buttons {
+    display: flex;
+    gap: 0.75rem;
+}
+
+.btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.5rem 1rem;
+    border-radius: 8px;
+    font-weight: 500;
+    text-decoration: none;
+    transition: background-color 0.2s ease, transform 0.2s ease;
+    cursor: pointer;
+    border: none;
+}
+
+.btn-primary {
+    background-color: #4299E1;
+    color: white;
+}
+
+.btn-primary:hover {
+    background-color: #3182CE;
+    transform: translateY(-2px);
+}
+
+.btn-warning {
+    background-color: #F6AD55;
+    color: white;
+}
+
+.btn-warning:hover {
+    background-color: #ED8936;
+    transform: translateY(-2px);
+}
+
+.btn-danger {
+    background-color: #FC8181;
+    color: white;
+}
+
+.btn-danger:hover {
+    background-color: #F56565;
+    transform: translateY(-2px);
+}
+
+.create-button {
+    margin-top: 2rem;
+    display: inline-block;
+}
+
+/* Responsivité */
+
+    .features-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .action-buttons {
+        flex-direction: column;
+    }
+
+    .btn {
+        width: 100%;
+    }
+}
+
+</style>
+
+<div class="dashboard-container">
+    <div class="welcome-section">
+        <h2 class="welcome-title">Bienvenue, @Model.Profile.FirstName</h2>
+    </div>
+
+    @if (TempData["SuccessMessage"] != null)
+    {
+        <div class="alert alert-success">
+            @TempData["SuccessMessage"]
+        </div>
+    }
+
+    <!-- Nouvelle section des fonctionnalités -->
+    <div class="features-grid">
+        <div class="feature-card">
+            <div class="feature-icon">✏️</div>
+            <h3 class="feature-title">Créez vos Articles</h3>
+            <p class="feature-description">
+                Partagez vos idées, expériences et connaissances avec la communauté. 
+                Ajoutez des images, formatez votre texte et créez du contenu engageant.
+            </p>
+        </div>
+        <div class="feature-card">
+            <div class="feature-icon">🌐</div>
+            <h3 class="feature-title">Partagez avec la Communauté</h3>
+            <p class="feature-description">
+                Vos articles seront visibles par tous les membres. Recevez des commentaires 
+                et interagissez avec vos lecteurs.
+            </p>
+        </div>
+        <div class="feature-card">
+            <div class="feature-icon">📊</div>
+            <h3 class="feature-title">Gérez votre Contenu</h3>
+            <p class="feature-description">
+                Modifiez vos articles, suivez les interactions et gardez le contrôle 
+                total sur votre contenu à tout moment.
+            </p>
+        </div>
+    </div>
+
+    <!-- Guide de démarrage rapide -->
+    <div class="quick-start">
+        <h3 class="quick-start-title">Comment commencer ?</h3>
+        <ul class="steps-list">
+            <li>
+                <span class="step-number">1</span>
+                <span>Cliquez sur "Créer un nouvel article" ci-dessous</span>
+            </li>
+            <li>
+                <span class="step-number">2</span>
+                <span>Donnez un titre accrocheur à votre article et rédigez votre contenu</span>
+            </li>
+            <li>
+                <span class="step-number">3</span>
+                <span>Ajoutez des images pour illustrer vos propos</span>
+            </li>
+            <li>
+                <span class="step-number">4</span>
+                <span>Publiez et partagez avec la communauté !</span>
+            </li>
+        </ul>
+    </div>
+
+    <div class="articles-section">
+        <h3 class="section-title">Vos articles</h3>
+
+        <table class="articles-table">
+            <thead>
+                <tr>
+                    <th>Titre</th>
+                    <th>Date de création</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var article in Model.Articles)
+                {
+                    <tr>
+                        <td>@article.Title</td>
+                        <td>@article.CreatedAt.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</td>
+                        <td>
+                            <div class="action-buttons">
+                                <a href="@Url.Action("EditArticle", new { id = article.Id })" class="btn btn-warning">Modifier</a>
+                                <form asp-action="DeleteArticle" method="post" style="display: inline;">
+                                    <input type="hidden" name="id" value="@article.Id" />
+                                    <button type="submit" class="btn btn-danger" 
+                                            onclick="return confirm('Voulez-vous vraiment supprimer cet article ?')">
+                                        Supprimer
+                                    </button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+
+        <a href="@Url.Action("CreateArticle")" class="btn btn-primary create-button">
+            Créer un nouvel article
+        </a>
+    </div>
+</div>

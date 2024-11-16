@@ -1,104 +1,210 @@
 using Microsoft.Extensions.Options;
 using MongoDB.Driver;
-using WebApplication1.Settings;
 using WebApplication1.Models;
+using WebApplication1.Settings;
+using System;
+using System.Collections.Generic;
+using System.Threading.Tasks;
 
-namespace WebApplication1.Services 
+namespace WebApplication1.Services
 {
     public class MongoDbService
     {
-        private readonly IMongoCollection<ApplicationUser> _usersCollection;
         private readonly IMongoDatabase _database;
+
+        private readonly IMongoCollection<ApplicationUser> _usersCollection;
+        private readonly IMongoCollection<Notification> _notificationsCollection;
+        private readonly IMongoCollection<Article> _articlesCollection;
+        private readonly IMongoCollection<Comment> _commentsCollection;
+        private readonly IMongoCollection<Like> _likesCollection;
 
         public MongoDbService(IOptions<MongoDBSettings> settings)
         {
-            if (settings == null || settings.Value == null)
+            var mongoSettings = settings?.Value;
+            if (mongoSettings == null || string.IsNullOrEmpty(mongoSettings.ConnectionString) || string.IsNullOrEmpty(mongoSettings.DatabaseName))
             {
-                throw new ArgumentNullException(nameof(settings), "MongoDB settings cannot be null");
-            }
-
-            var mongoSettings = settings.Value;
-
-            if (string.IsNullOrEmpty(mongoSettings.ConnectionString))
-            {
-                throw new ArgumentException("Connection string cannot be null or empty", nameof(settings));
-            }
-
-            if (string.IsNullOrEmpty(mongoSettings.DatabaseName))
-            {
-                throw new ArgumentException("Database name cannot be null or empty", nameof(settings));
-            }
-
-            if (string.IsNullOrEmpty(mongoSettings.UsersCollectionName))
-            {
-                throw new ArgumentException("Users collection name cannot be null or empty", nameof(settings));
+                throw new ArgumentException("Invalid MongoDB settings");
             }
 
             var client = new MongoClient(mongoSettings.ConnectionString);
             _database = client.GetDatabase(mongoSettings.DatabaseName);
+
             _usersCollection = _database.GetCollection<ApplicationUser>(mongoSettings.UsersCollectionName);
+            _notificationsCollection = _database.GetCollection<Notification>("Notifications");
+            _articlesCollection = _database.GetCollection<Article>("Articles");
+            _commentsCollection = _database.GetCollection<Comment>("Comments");
+            _likesCollection = _database.GetCollection<Like>("Likes");
         }
 
-        public IMongoCollection<ApplicationUser> Users => _usersCollection;
-
-        public IMongoCollection<T> GetCollection<T>(string name)
+        // Méthode générique pour obtenir une collection
+        public IMongoCollection<T> GetCollection<T>(string collectionName)
         {
-            if (string.IsNullOrEmpty(name))
-            {
-                throw new ArgumentException("Collection name cannot be null or empty", nameof(name));
-            }
-
-            return _database.GetCollection<T>(name);
+            return _database.GetCollection<T>(collectionName);
         }
 
-        // Méthodes utilitaires pour les opérations courantes
-        public async Task<List<T>> GetAllAsync<T>(string collectionName)
+        // Méthode pour sauvegarder une notification
+        public async Task SaveNotificationAsync(Notification notification)
         {
-            return await GetCollection<T>(collectionName)
+            await _notificationsCollection.InsertOneAsync(notification);
+        }
+
+        // Méthode pour obtenir une liste paginée des articles
+        public async Task<List<Article>> GetArticlesAsync(int page, int pageSize)
+        {
+            return await _articlesCollection
                 .Find(_ => true)
+                .SortByDescending(a => a.CreatedAt)
+                .Skip((page - 1) * pageSize)
+                .Limit(pageSize)
                 .ToListAsync();
         }
 
-        public async Task<T> GetByIdAsync<T>(string collectionName, string id)
+        // Méthode pour récupérer tous les articles
+        public async Task<List<Article>> GetAllArticlesAsync()
         {
-            var filter = Builders<T>.Filter.Eq("_id", id);
-            return await GetCollection<T>(collectionName)
-                .Find(filter)
+            return await _articlesCollection
+                .Find(_ => true)
+                .SortByDescending(a => a.CreatedAt)
+                .ToListAsync();
+        }
+
+        // Méthode pour obtenir le total d'articles
+        public async Task<long> GetTotalArticlesAsync()
+        {
+            return await _articlesCollection.CountDocumentsAsync(_ => true);
+        }
+
+        // Méthode pour obtenir un article par ID
+        public async Task<Article> GetArticleByIdAsync(string id)
+        {
+            return await _articlesCollection.Find(a => a.Id == id).FirstOrDefaultAsync();
+        }
+
+        // Méthode pour créer un article
+        public async Task CreateArticleAsync(Article article)
+        {
+            article.CreatedAt = DateTime.UtcNow;
+            article.UpdatedAt = DateTime.UtcNow;
+            article.Likes = new List<Like>();
+            await _articlesCollection.InsertOneAsync(article);
+        }
+
+        // Méthode pour mettre à jour un article
+        public async Task UpdateArticleAsync(Article article)
+        {
+            var filter = Builders<Article>.Filter.Eq(a => a.Id, article.Id);
+            var update = Builders<Article>.Update
+                .Set(a => a.Title, article.Title)
+                .Set(a => a.Content, article.Content)
+                .Set(a => a.UpdatedAt, DateTime.UtcNow)
+                .Set(a => a.Likes, article.Likes);
+
+            await _articlesCollection.UpdateOneAsync(filter, update);
+        }
+
+        // Méthode pour supprimer un article
+        public async Task DeleteArticleAsync(string id)
+        {
+            await _articlesCollection.DeleteOneAsync(a => a.Id == id);
+            // Supprimer également les commentaires associés
+            await _commentsCollection.DeleteManyAsync(c => c.ArticleId == id);
+            // Supprimer les likes associés
+            await _likesCollection.DeleteManyAsync(l => l.ArticleId == id);
+        }
+
+        // Méthode pour obtenir les commentaires d'un article par ID
+        public async Task<List<Comment>> GetCommentsByArticleIdAsync(string articleId)
+        {
+            return await _commentsCollection
+                .Find(c => c.ArticleId == articleId)
+                .SortByDescending(c => c.CreatedAt)
+                .ToListAsync();
+        }
+
+        // Méthode pour créer un commentaire
+        public async Task CreateCommentAsync(Comment comment)
+        {
+            comment.CreatedAt = DateTime.UtcNow;
+            await _commentsCollection.InsertOneAsync(comment);
+        }
+
+        // Méthode pour supprimer un commentaire
+        public async Task DeleteCommentAsync(string id)
+        {
+            await _commentsCollection.DeleteOneAsync(c => c.Id == id);
+        }
+
+        // Méthode pour obtenir un like d'un utilisateur pour un article
+        public async Task<Like> GetLikeByUserAndArticleAsync(string userId, string articleId)
+        {
+            return await _likesCollection
+                .Find(l => l.UserId == userId && l.ArticleId == articleId)
                 .FirstOrDefaultAsync();
         }
 
-        public async Task CreateAsync<T>(string collectionName, T document)
+        // Méthode pour créer un like
+        public async Task CreateLikeAsync(string articleId, string userId)
         {
-            await GetCollection<T>(collectionName)
-                .InsertOneAsync(document);
+            var like = new Like(articleId, userId);
+            await _likesCollection.InsertOneAsync(like);
+
+            // Mettre à jour le nombre de likes dans l'article
+            var article = await GetArticleByIdAsync(articleId);
+            if (article != null)
+            {
+                article.Likes.Add(like);
+                await UpdateArticleAsync(article);
+            }
         }
 
-        public async Task UpdateAsync<T>(string collectionName, string id, T document)
+        // Méthode pour supprimer un like
+        public async Task DeleteLikeAsync(string articleId, string userId)
         {
-            await GetCollection<T>(collectionName)
-                .ReplaceOneAsync(
-                    Builders<T>.Filter.Eq("_id", id),
-                    document);
+            await _likesCollection.DeleteOneAsync(l => l.ArticleId == articleId && l.UserId == userId);
+
+            // Mettre à jour le nombre de likes dans l'article
+            var article = await GetArticleByIdAsync(articleId);
+            if (article != null)
+            {
+                var likeToRemove = article.Likes.FirstOrDefault(l => l.UserId == userId);
+                if (likeToRemove != null)
+                {
+                    article.Likes.Remove(likeToRemove);
+                    await UpdateArticleAsync(article);
+                }
+            }
         }
 
-        public async Task DeleteAsync<T>(string collectionName, string id)
+        // Méthode pour obtenir le nombre de likes d'un article
+        public async Task<long> GetLikesCountByArticleIdAsync(string articleId)
         {
-            await GetCollection<T>(collectionName)
-                .DeleteOneAsync(Builders<T>.Filter.Eq("_id", id));
+            return await _likesCollection.CountDocumentsAsync(l => l.ArticleId == articleId);
         }
 
-        // Méthodes spécifiques pour ApplicationUser
-        public async Task<ApplicationUser?> GetUserByEmailAsync(string email)
+        // Méthode pour ajouter ou supprimer un like
+        public async Task ToggleLikeAsync(string articleId, string userId)
         {
-            return await _usersCollection
-                .Find(u => u.Email == email)
-                .FirstOrDefaultAsync();
-        }
+            var article = await GetArticleByIdAsync(articleId);
+            if (article == null)
+                throw new ArgumentException("Article not found");
 
-        public async Task<bool> CheckEmailExistsAsync(string email)
-        {
-            var user = await GetUserByEmailAsync(email);
-            return user != null;
+            var existingLike = article.Likes.FirstOrDefault(l => l.UserId == userId);
+
+            if (existingLike != null)
+            {
+                // Supprimer le like
+                article.Likes.Remove(existingLike);
+                await DeleteLikeAsync(articleId, userId);
+            }
+            else
+            {
+                // Ajouter le like
+                var like = new Like(articleId, userId);
+                article.Likes.Add(like);
+                await CreateLikeAsync(articleId, userId);
+            }
+
+            await UpdateArticleAsync(article);
         }
     }
 }

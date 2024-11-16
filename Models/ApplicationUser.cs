@@ -9,6 +9,7 @@ namespace WebApplication1.Models
     {
         public required string FirstName { get; set; }
         public required string LastName { get; set; }
+        public string ProfilePicture { get; set; }
         
         // Initialisation de la propriété Articles avec une liste vide
         public List<Article> Articles { get; set; } = new List<Article>(); 
