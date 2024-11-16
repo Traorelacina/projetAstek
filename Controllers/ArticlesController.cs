@@ -107,45 +107,48 @@ namespace WebApplication1.Controllers
         }
 
         // Ajouter un commentaire
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> AddComment(string articleId, string content)
+        // Ajouter un commentaire via une requête AJAX
+[HttpPost]
+[ValidateAntiForgeryToken]
+public async Task<IActionResult> AddComment(string articleId, string content)
+{
+    var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+    var user = await _userManager.FindByIdAsync(userId);
+    var article = await _mongoDbService.GetArticleByIdAsync(articleId);
+
+    if (article == null || user == null) return NotFound();
+
+    var comment = new Comment
+    {
+        ArticleId = articleId,
+        AuthorId = userId,
+        AuthorFirstName = user.FirstName ?? User.Identity?.Name,
+        Content = content,
+        CreatedAt = DateTime.UtcNow
+    };
+
+    await _mongoDbService.CreateCommentAsync(comment);
+
+    if (article.AuthorId != userId)
+    {
+        await _hubContext.Clients.User(article.AuthorId)
+            .SendAsync("ReceiveNotification", $"{User.Identity?.Name} a commenté votre article");
+
+        var notification = new Notification
         {
-            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-            var user = await _userManager.FindByIdAsync(userId);
-            var article = await _mongoDbService.GetArticleByIdAsync(articleId);
+            UserId = article.AuthorId,
+            Message = $"{User.Identity?.Name} a commenté votre article",
+            CreatedAt = DateTime.UtcNow,
+            Type = "Commentaire",
+            IsRead = false
+        };
+        await _mongoDbService.SaveNotificationAsync(notification);
+    }
 
-            if (article == null || user == null) return NotFound();
-
-            var comment = new Comment
-            {
-                ArticleId = articleId,
-                AuthorId = userId,
-                AuthorFirstName = user.FirstName ?? User.Identity?.Name,
-                Content = content,
-                CreatedAt = DateTime.UtcNow
-            };
-
-            await _mongoDbService.CreateCommentAsync(comment);
-
-            if (article.AuthorId != userId)
-            {
-                await _hubContext.Clients.User(article.AuthorId)
-                    .SendAsync("ReceiveNotification", $"{User.Identity?.Name} a commenté votre article");
-
-                var notification = new Notification
-                {
-                    UserId = article.AuthorId,
-                    Message = $"{User.Identity?.Name} a commenté votre article",
-                    CreatedAt = DateTime.UtcNow,
-                    Type = "Commentaire",
-                    IsRead = false
-                };
-                await _mongoDbService.SaveNotificationAsync(notification);
-            }
-
-            return RedirectToAction("Details", new { id = articleId });
-        }
+    // Récupérer les commentaires mis à jour
+    var comments = await _mongoDbService.GetCommentsByArticleIdAsync(articleId);
+    return PartialView("~/Views/Articles/Partial/Comments.cshtml", comments);
+}
 
         // Gérer les likes
         [HttpPost]

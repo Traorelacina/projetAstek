@@ -138,21 +138,47 @@
         <h4>Commentaires</h4>
 
         <!-- Affichage des commentaires -->
-       @Html.Partial("~/Views/Articles/Partial/Comments.cshtml", Model.Comments)
-
+        <div id="comments-container">
+            @Html.Partial("~/Views/Articles/Partial/Comments.cshtml", Model.Comments)
+        </div>
 
         <!-- Formulaire d'ajout de commentaire -->
-        <form method="post" action="@Url.Action("AddComment", "Articles")">
+        <form id="comment-form" method="post" action="@Url.Action("AddComment", "Articles")" onsubmit="submitComment(event)">
             @Html.AntiForgeryToken()
             <input type="hidden" name="articleId" value="@Model.Id" />
-            <textarea name="content" placeholder="Ajouter un commentaire..." class="form-control mb-3" rows="3" required></textarea>
+            <textarea id="comment-content" name="content" placeholder="Ajouter un commentaire..." class="form-control mb-3" rows="3" required></textarea>
             <button type="submit" class="btn btn-primary">Envoyer</button>
         </form>
     </div>
 </div>
 
-
 <script>
+    async function submitComment(event) {
+        event.preventDefault();
+
+        const form = document.getElementById('comment-form');
+        const content = document.getElementById('comment-content').value;
+        const articleId = form.querySelector('input[name="articleId"]').value;
+        const token = form.querySelector('input[name="__RequestVerificationToken"]').value;
+
+        const response = await fetch(form.action, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'RequestVerificationToken': token
+            },
+            body: `articleId=${articleId}&content=${encodeURIComponent(content)}`
+        });
+
+        if (response.ok) {
+            const commentsHtml = await response.text();
+            document.getElementById('comments-container').innerHTML = commentsHtml;
+            form.reset();
+        } else {
+            console.error('Erreur lors de l\'envoi du commentaire');
+        }
+    }
+
     function toggleLike(articleId) {
         // Récupérer le token anti-forgery
         const token = document.querySelector('input[name="__RequestVerificationToken"]').value;
