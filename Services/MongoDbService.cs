@@ -87,6 +87,7 @@ namespace WebApplication1.Services
             article.UpdatedAt = DateTime.UtcNow;
             article.Likes = new List<Like>();
             await _articlesCollection.InsertOneAsync(article);
+            
         }
 
         // Méthode pour mettre à jour un article

@@ -43,7 +43,8 @@
         <div class="mb-3">
             <label for="imageFile" class="form-label fw-bold">Image</label>
             <input type="file" class="form-control" name="imageFile" accept="image/*" />
-            @if (ViewData.ModelState["imageFile"] != null)
+            <!-- Afficher les erreurs si l'image n'est pas valide -->
+            @if (ViewData.ModelState["imageFile"] != null && ViewData.ModelState["imageFile"].Errors.Any())
             {
                 <span class="text-danger">@ViewData.ModelState["imageFile"].Errors[0].ErrorMessage</span>
             }

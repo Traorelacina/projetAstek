@@ -49,13 +49,21 @@ namespace WebApplication1.Controllers
             article.AuthorFirstName = user.FirstName ?? "Inconnu";
             article.CreatedAt = DateTime.UtcNow;
 
-            // Gestion du téléchargement d'image
+            // Gestion du téléchargement d'image (facultatif)
             if (imageFile != null && imageFile.Length > 0)
             {
                 if (imageFile.ContentType.StartsWith("image/"))
                 {
-                    string uploadDir = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "images");
+                    // Changer le répertoire de téléchargement à wwwroot/uploads
+                    string uploadDir = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "uploads");
                     Directory.CreateDirectory(uploadDir);
+
+                    // Vérifier la taille du fichier (maximum 10 Mo)
+                    if (imageFile.Length > 10 * 1024 * 1024) // 10 Mo
+                    {
+                        ModelState.AddModelError("imageFile", "L'image ne peut pas dépasser 10 Mo.");
+                        return View(article);
+                    }
 
                     // Générer un nom de fichier unique pour éviter les collisions
                     string fileName = $"{Path.GetFileNameWithoutExtension(imageFile.FileName)}_{Guid.NewGuid()}{Path.GetExtension(imageFile.FileName)}";
@@ -66,13 +74,19 @@ namespace WebApplication1.Controllers
                         await imageFile.CopyToAsync(stream);
                     }
 
-                    article.ImagePath = $"/images/{fileName}";
+                    // Enregistrer le chemin de l'image dans l'article
+                    article.ImagePath = $"/uploads/{fileName}";
                 }
                 else
                 {
                     ModelState.AddModelError("imageFile", "Le fichier doit être une image.");
                     return View(article);
                 }
+            }
+            else
+            {
+                // Si aucune image n'est téléchargée, ImagePath restera null ou une valeur par défaut (si vous voulez en assigner une)
+                article.ImagePath = null; // Optionnel, puisque `null` est déjà la valeur par défaut
             }
 
             if (!ModelState.IsValid)
@@ -107,48 +121,47 @@ namespace WebApplication1.Controllers
         }
 
         // Ajouter un commentaire
-        // Ajouter un commentaire via une requête AJAX
-[HttpPost]
-[ValidateAntiForgeryToken]
-public async Task<IActionResult> AddComment(string articleId, string content)
-{
-    var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-    var user = await _userManager.FindByIdAsync(userId);
-    var article = await _mongoDbService.GetArticleByIdAsync(articleId);
-
-    if (article == null || user == null) return NotFound();
-
-    var comment = new Comment
-    {
-        ArticleId = articleId,
-        AuthorId = userId,
-        AuthorFirstName = user.FirstName ?? User.Identity?.Name,
-        Content = content,
-        CreatedAt = DateTime.UtcNow
-    };
-
-    await _mongoDbService.CreateCommentAsync(comment);
-
-    if (article.AuthorId != userId)
-    {
-        await _hubContext.Clients.User(article.AuthorId)
-            .SendAsync("ReceiveNotification", $"{User.Identity?.Name} a commenté votre article");
-
-        var notification = new Notification
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> AddComment(string articleId, string content)
         {
-            UserId = article.AuthorId,
-            Message = $"{User.Identity?.Name} a commenté votre article",
-            CreatedAt = DateTime.UtcNow,
-            Type = "Commentaire",
-            IsRead = false
-        };
-        await _mongoDbService.SaveNotificationAsync(notification);
-    }
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            var user = await _userManager.FindByIdAsync(userId);
+            var article = await _mongoDbService.GetArticleByIdAsync(articleId);
 
-    // Récupérer les commentaires mis à jour
-    var comments = await _mongoDbService.GetCommentsByArticleIdAsync(articleId);
-    return PartialView("~/Views/Articles/Partial/Comments.cshtml", comments);
-}
+            if (article == null || user == null) return NotFound();
+
+            var comment = new Comment
+            {
+                ArticleId = articleId,
+                AuthorId = userId,
+                AuthorFirstName = user.FirstName ?? User.Identity?.Name,
+                Content = content,
+                CreatedAt = DateTime.UtcNow
+            };
+
+            await _mongoDbService.CreateCommentAsync(comment);
+
+            if (article.AuthorId != userId)
+            {
+                await _hubContext.Clients.User(article.AuthorId)
+                    .SendAsync("ReceiveNotification", $"{User.Identity?.Name} a commenté votre article");
+
+                var notification = new Notification
+                {
+                    UserId = article.AuthorId,
+                    Message = $"{User.Identity?.Name} a commenté votre article",
+                    CreatedAt = DateTime.UtcNow,
+                    Type = "Commentaire",
+                    IsRead = false
+                };
+                await _mongoDbService.SaveNotificationAsync(notification);
+            }
+
+            // Récupérer les commentaires mis à jour
+            var comments = await _mongoDbService.GetCommentsByArticleIdAsync(articleId);
+            return PartialView("~/Views/Articles/Partial/Comments.cshtml", comments);
+        }
 
         // Gérer les likes
         [HttpPost]

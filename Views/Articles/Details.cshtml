@@ -120,12 +120,15 @@
     </div>
 
     <!-- Image de l'article (si disponible) -->
-    @if (!string.IsNullOrEmpty(Model.ImagePath))
-    {
-        <div class="image-container mb-4">
-            <img src="@Model.ImagePath" alt="Image de l'article" class="img-fluid">
-        </div>
-    }
+   @if (string.IsNullOrEmpty(Model.ImagePath))
+{
+    <img src="~/images/articles.jpeg" alt="Image par défaut" class="img-fluid">
+}
+else
+{
+    <img src="@Model.ImagePath" alt="Image de l'article" class="img-fluid">
+}
+
 
     <!-- Section des Likes -->
     <div class="likes-section">
