@@ -38,10 +38,16 @@ builder.Services.AddSingleton<IMongoCollection<Article>>(sp =>
     return database.GetCollection<Article>("Articles");  // Assurez-vous que le nom de la collection est correct
 });
 
-
+builder.Services.AddScoped<UserService>();
 
 // Service MongoDbService
 builder.Services.AddScoped<MongoDbService>();
+
+// Configuration de l'Antiforgery (CSRF)
+builder.Services.AddAntiforgery(options =>
+{
+    options.HeaderName = "X-CSRF-TOKEN"; // Nom de l'en-tête pour transmettre le jeton
+});
 
 // Ajout de Swagger pour l'API
 builder.Services.AddControllersWithViews();
@@ -85,6 +91,7 @@ app.UseHttpsRedirection();
 app.UseStaticFiles();
 
 app.UseRouting();
+
 
 // Authentification et autorisation
 app.UseAuthentication();

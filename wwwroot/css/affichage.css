@@ -1,0 +1,15 @@
+/* Taille d'image par défaut sur les grands écrans */
+.default-image {
+    width: 100%; /* L'image prend 100% de la largeur de son conteneur */
+    max-width: 1200px; /* Limite la taille de l'image à 1200px sur les grands écrans */
+    height: auto; /* Laisse la hauteur s'ajuster automatiquement pour maintenir les proportions */
+}
+
+/* Pour les petits écrans (téléphone mobile et tablettes), l'image sera plus petite */
+@media screen and (max-width: 768px) {
+    .default-image {
+        width: 100%; /* Toujours pleine largeur */
+        max-width: 600px; /* Limite la taille de l'image à 600px sur les écrans plus petits */
+        height: auto;
+    }
+}

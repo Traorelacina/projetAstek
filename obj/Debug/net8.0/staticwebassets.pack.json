@@ -5,6 +5,10 @@
       "PackagePath": "staticwebassets\\WebApplication1.bundle.scp.css"
     },
     {
+      "Id": "C:\\Users\\USER\\Desktop\\projet informatique\\bag\\WebApplication1\\wwwroot\\css\\affichage.css",
+      "PackagePath": "staticwebassets\\css\\affichage.css"
+    },
+    {
       "Id": "C:\\Users\\USER\\Desktop\\projet informatique\\bag\\WebApplication1\\wwwroot\\css\\dashboard.css",
       "PackagePath": "staticwebassets\\css\\dashboard.css"
     },
@@ -309,8 +313,16 @@
       "PackagePath": "staticwebassets\\uploads\\dcc6cb1c-0b0b-4f2d-9966-599ab1de44ca_lamigyd8s80plyp.png"
     },
     {
+      "Id": "C:\\Users\\USER\\Desktop\\projet informatique\\bag\\WebApplication1\\wwwroot\\uploads\\df038331-2aef-4b75-9ef8-3e57374ee632.jpeg",
+      "PackagePath": "staticwebassets\\uploads\\df038331-2aef-4b75-9ef8-3e57374ee632.jpeg"
+    },
+    {
       "Id": "C:\\Users\\USER\\Desktop\\projet informatique\\bag\\WebApplication1\\wwwroot\\uploads\\f2ce55bd-650c-42e5-82b2-4ef39e50ea34_Abanan.jpeg",
       "PackagePath": "staticwebassets\\uploads\\f2ce55bd-650c-42e5-82b2-4ef39e50ea34_Abanan.jpeg"
+    },
+    {
+      "Id": "C:\\Users\\USER\\Desktop\\projet informatique\\bag\\WebApplication1\\wwwroot\\wwwroot - Raccourci.lnk",
+      "PackagePath": "staticwebassets\\wwwroot - Raccourci.lnk"
     },
     {
       "Id": "obj\\Debug\\net8.0\\staticwebassets\\msbuild.WebApplication1.Microsoft.AspNetCore.StaticWebAssets.props",

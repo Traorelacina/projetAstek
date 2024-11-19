@@ -6,40 +6,59 @@
     ViewData["Title"] = "Détails de l'article";
 }
 
+@section Styles {
+    <link rel="stylesheet" href="~/css/affichage.css" />
+}
+
+
 <style>
+    /* Définir des variables pour faciliter la gestion des couleurs et tailles */
+    :root {
+        --primary-color: #4299e1;
+        --hover-color: #3182ce;
+        --bg-color: #f7fafc;
+        --text-color: #2d3748;
+        --subtext-color: #4a5568;
+        --border-radius: 8px;
+        --transition-speed: 0.3s;
+    }
+
     .article-container {
-        max-width: 800px;
+        max-width: 900px;
         margin: 2rem auto;
-        padding: 0 1rem;
+        padding: 0 1.5rem;
+        font-family: 'Arial', sans-serif;
     }
 
     .article-title {
-        font-size: 2.5rem;
-        color: #2d3748;
+        font-size: 2.8rem;
+        color: var(--text-color);
         margin-bottom: 1.5rem;
         font-weight: 700;
-        border-bottom: 3px solid #4299e1;
+        border-bottom: 4px solid var(--primary-color);
         padding-bottom: 0.5rem;
     }
 
     .article-content {
-        font-size: 1.1rem;
+        font-size: 1.2rem;
         line-height: 1.8;
-        color: #4a5568;
+        color: var(--subtext-color);
         margin-bottom: 2rem;
+        text-align: justify;
     }
 
     .article-meta {
-        color: #718096;
+        color: var(--subtext-color);
         font-style: italic;
         margin-bottom: 2rem;
+        font-size: 1rem;
     }
 
     .image-container {
         margin: 2rem 0;
-        border-radius: 8px;
+        border-radius: var(--border-radius);
         overflow: hidden;
-        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
     }
 
     .image-container img {
@@ -51,27 +70,31 @@
     .likes-section {
         margin: 2rem 0;
         padding: 1rem;
-        background-color: #f7fafc;
-        border-radius: 8px;
+        background-color: var(--bg-color);
+        border-radius: var(--border-radius);
+        display: flex;
+        align-items: center;
     }
 
     #like-button {
-        background-color: #4299e1;
+        background-color: var(--primary-color);
         border: none;
-        padding: 0.5rem 1.5rem;
-        border-radius: 25px;
-        transition: all 0.3s ease;
+        padding: 0.7rem 2rem;
+        border-radius: 30px;
+        color: white;
+        font-weight: 600;
+        transition: all var(--transition-speed);
     }
 
     #like-button:hover {
-        background-color: #3182ce;
+        background-color: var(--hover-color);
         transform: translateY(-2px);
     }
 
     #likes-count {
-        margin-left: 1rem;
+        margin-left: 1.5rem;
         font-weight: 600;
-        color: #2d3748;
+        color: var(--text-color);
     }
 
     .comments-section {
@@ -79,29 +102,54 @@
     }
 
     .comments-title {
-        font-size: 1.8rem;
-        font-weight: 600;
+        font-size: 2rem;
+        font-weight: 700;
+        color: var(--text-color);
     }
 
     .comment {
         margin: 1.5rem 0;
         padding: 1rem;
         background-color: #edf2f7;
-        border-radius: 8px;
+        border-radius: var(--border-radius);
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
     }
 
     .comment-author {
         font-weight: 600;
-        color: #2d3748;
+        color: var(--text-color);
     }
 
     .comment-content {
         font-size: 1rem;
-        color: #4a5568;
+        color: var(--subtext-color);
         margin-top: 0.5rem;
     }
-</style>
 
+    /* Styles pour les icônes et actions */
+    .comment-actions {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+    }
+
+    .comment-actions button {
+        background: none;
+        border: none;
+        color: var(--primary-color);
+        font-size: 1rem;
+        cursor: pointer;
+        transition: color 0.3s;
+    }
+
+    .comment-actions button:hover {
+        color: var(--hover-color);
+    }
+
+    .comment-actions i {
+        margin-right: 5px;
+    }
+</style>
 
 <div class="article-container">
     <!-- Titre de l'article -->
@@ -120,25 +168,27 @@
     </div>
 
     <!-- Image de l'article (si disponible) -->
-   @if (string.IsNullOrEmpty(Model.ImagePath))
+  
+@if (string.IsNullOrEmpty(Model.ImagePath))
 {
-    <img src="~/images/articles.jpeg" alt="Image par défaut" class="img-fluid">
+    <img src="~/images/articles.jpeg" alt="Image par défaut" class="img-fluid default-image">
 }
 else
 {
-    <img src="@Model.ImagePath" alt="Image de l'article" class="img-fluid">
+    <img src="@Model.ImagePath" alt="Image de l'article" class="img-fluid default-image">
 }
-
 
     <!-- Section des Likes -->
     <div class="likes-section">
-        <button id="like-button" onclick="toggleLike('@Model.Id')">J'aime</button>
+        <button id="like-button" onclick="toggleLike('@Model.Id')">
+            <i class="fas fa-thumbs-up"></i> J'aime
+        </button>
         <span id="likes-count">@Model.LikesCount</span>
     </div>
 
     <!-- Section des commentaires -->
     <div class="comments-section mt-4">
-        <h4>Commentaires</h4>
+        <h4 class="comments-title">Commentaires</h4>
 
         <!-- Affichage des commentaires -->
         <div id="comments-container">
@@ -164,13 +214,13 @@ else
         const articleId = form.querySelector('input[name="articleId"]').value;
         const token = form.querySelector('input[name="__RequestVerificationToken"]').value;
 
+        // Envoi de la requête pour ajouter un commentaire
         const response = await fetch(form.action, {
             method: 'POST',
             headers: {
-                'Content-Type': 'application/x-www-form-urlencoded',
-                'RequestVerificationToken': token
+                'Content-Type': 'application/x-www-form-urlencoded'
             },
-            body: `articleId=${articleId}&content=${encodeURIComponent(content)}`
+            body: `__RequestVerificationToken=${token}&articleId=${articleId}&content=${encodeURIComponent(content)}`
         });
 
         if (response.ok) {
@@ -183,16 +233,15 @@ else
     }
 
     function toggleLike(articleId) {
-        // Récupérer le token anti-forgery
         const token = document.querySelector('input[name="__RequestVerificationToken"]').value;
 
+        // Envoi de la requête pour ajouter/retirer un like
         fetch(`/Articles/ToggleLike`, {
             method: 'POST',
             headers: {
-                'Content-Type': 'application/x-www-form-urlencoded',
-                'RequestVerificationToken': token
+                'Content-Type': 'application/x-www-form-urlencoded'
             },
-            body: `articleId=${articleId}`
+            body: `__RequestVerificationToken=${token}&articleId=${articleId}`
         })
         .then(response => {
             if (!response.ok) {
@@ -201,7 +250,6 @@ else
             return response.json();
         })
         .then(data => {
-            // Mettre à jour le compteur de likes
             const likeCount = document.querySelector("#likes-count");
             likeCount.textContent = data.likesCount;
         })

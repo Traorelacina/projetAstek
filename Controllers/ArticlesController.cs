@@ -122,82 +122,90 @@ namespace WebApplication1.Controllers
 
         // Ajouter un commentaire
         [HttpPost]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> AddComment(string articleId, string content)
+[ValidateAntiForgeryToken]
+public async Task<IActionResult> AddComment(string articleId, string content)
+{
+    var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+    var user = await _userManager.FindByIdAsync(userId);
+    var article = await _mongoDbService.GetArticleByIdAsync(articleId);
+
+    if (article == null || user == null) return NotFound();
+
+    var comment = new Comment
+    {
+        ArticleId = articleId,
+        AuthorId = userId,
+        AuthorFirstName = user.FirstName ?? "Inconnu",
+        AuthorLastName = user.LastName ?? "Inconnu", // Ajout du nom de famille
+        Content = content,
+        CreatedAt = DateTime.UtcNow
+    };
+
+    await _mongoDbService.CreateCommentAsync(comment);
+
+    if (article.AuthorId != userId)
+    {
+        string commenterName = $"{user.FirstName} {user.LastName}".Trim(); // Combine prénom et nom
+        await _hubContext.Clients.User(article.AuthorId)
+            .SendAsync("ReceiveNotification", $"{commenterName} a commenté votre article");
+
+        var notification = new Notification
         {
-            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-            var user = await _userManager.FindByIdAsync(userId);
-            var article = await _mongoDbService.GetArticleByIdAsync(articleId);
+            UserId = article.AuthorId,
+            Message = $"{commenterName} a commenté votre article",
+            CreatedAt = DateTime.UtcNow,
+            Type = "Commentaire",
+            IsRead = false,
+            Link = Url.Action("Details", "Articles", new { id = articleId }) 
+        };
+        await _mongoDbService.SaveNotificationAsync(notification);
+    }
 
-            if (article == null || user == null) return NotFound();
+    // Récupérer les commentaires mis à jour
+    var comments = await _mongoDbService.GetCommentsByArticleIdAsync(articleId);
+    return PartialView("~/Views/Articles/Partial/Comments.cshtml", comments);
+}
 
-            var comment = new Comment
-            {
-                ArticleId = articleId,
-                AuthorId = userId,
-                AuthorFirstName = user.FirstName ?? User.Identity?.Name,
-                Content = content,
-                CreatedAt = DateTime.UtcNow
-            };
-
-            await _mongoDbService.CreateCommentAsync(comment);
-
-            if (article.AuthorId != userId)
-            {
-                await _hubContext.Clients.User(article.AuthorId)
-                    .SendAsync("ReceiveNotification", $"{User.Identity?.Name} a commenté votre article");
-
-                var notification = new Notification
-                {
-                    UserId = article.AuthorId,
-                    Message = $"{User.Identity?.Name} a commenté votre article",
-                    CreatedAt = DateTime.UtcNow,
-                    Type = "Commentaire",
-                    IsRead = false
-                };
-                await _mongoDbService.SaveNotificationAsync(notification);
-            }
-
-            // Récupérer les commentaires mis à jour
-            var comments = await _mongoDbService.GetCommentsByArticleIdAsync(articleId);
-            return PartialView("~/Views/Articles/Partial/Comments.cshtml", comments);
-        }
 
         // Gérer les likes
         [HttpPost]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> ToggleLike(string articleId)
+[ValidateAntiForgeryToken]
+public async Task<IActionResult> ToggleLike(string articleId)
+{
+    var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+    var user = await _userManager.FindByIdAsync(userId);
+    var article = await _mongoDbService.GetArticleByIdAsync(articleId);
+
+    if (article == null) return NotFound();
+
+    // Utiliser la méthode ToggleLikeAsync
+    await _mongoDbService.ToggleLikeAsync(articleId, userId);
+
+    // Récupérer le nombre de likes mis à jour
+    var likesCount = await _mongoDbService.GetLikesCountByArticleIdAsync(articleId);
+
+    // Envoyer une notification si l'article a un autre auteur
+    if (article.AuthorId != userId)
+    {
+        string likerName = $"{user.FirstName} {user.LastName}".Trim(); // Combine prénom et nom
+        await _hubContext.Clients.User(article.AuthorId)
+            .SendAsync("ReceiveNotification", $"{likerName} a aimé votre article");
+
+        var notification = new Notification
         {
-            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-            var article = await _mongoDbService.GetArticleByIdAsync(articleId);
+            UserId = article.AuthorId,
+            Message = $"{likerName} a aimé votre article",
+            CreatedAt = DateTime.UtcNow,
+            Type = "Like",
+            IsRead = false,
+            Link = Url.Action("Details", "Articles", new { id = articleId })
+        };
+        await _mongoDbService.SaveNotificationAsync(notification);
+    }
 
-            if (article == null) return NotFound();
+    // Retourner le nombre de likes mis à jour en JSON
+    return Json(new { likesCount });
+}
 
-            // Utiliser la méthode ToggleLikeAsync
-            await _mongoDbService.ToggleLikeAsync(articleId, userId);
-
-            // Récupérer le nombre de likes mis à jour
-            var likesCount = await _mongoDbService.GetLikesCountByArticleIdAsync(articleId);
-
-            // Envoyer une notification si l'article a un autre auteur
-            if (article.AuthorId != userId)
-            {
-                await _hubContext.Clients.User(article.AuthorId)
-                    .SendAsync("ReceiveNotification", $"{User.Identity?.Name} a aimé votre article");
-
-                var notification = new Notification
-                {
-                    UserId = article.AuthorId,
-                    Message = $"{User.Identity?.Name} a aimé votre article",
-                    CreatedAt = DateTime.UtcNow,
-                    Type = "Like",
-                    IsRead = false
-                };
-                await _mongoDbService.SaveNotificationAsync(notification);
-            }
-
-            // Retourner le nombre de likes mis à jour en JSON
-            return Json(new { likesCount });
-        }
     }
 }

@@ -40,10 +40,24 @@ button.accept-policy[b-bddmc6yalx] {
   line-height: inherit;
 }
 
-.footer[b-bddmc6yalx] {
-  position: absolute;
+footer[b-bddmc6yalx] {
+  position: fixed;
+  left: 0;
   bottom: 0;
   width: 100%;
-  white-space: nowrap;
-  line-height: 60px;
+  padding: 15px 0;
+  background-color: #f8f9fa;
+  text-align: center;
+  z-index: 1000; /* Assurez-vous qu'il soit au-dessus des autres éléments */
+}
+
+/* Ajustement pour les petits écrans */
+@media screen and (max-width: 768px) {
+  footer[b-bddmc6yalx] {
+    padding: 10px 0;
+  }
+
+  .container[b-bddmc6yalx] {
+    margin-bottom: 100px; /* Crée plus d'espace en bas sur mobile */
+  }
 }

@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Mvc.Filters;
 using System.Security.Claims;
 using WebApplication1.Models;
 using System.Threading.Tasks;
@@ -17,6 +18,26 @@ namespace WebApplication1.Controllers
         public ProfileController(UserManager<ApplicationUser> userManager)
         {
             _userManager = userManager;
+        }
+
+        // Définit l'image de profil pour les vues via ViewData
+        public override void OnActionExecuting(ActionExecutingContext context)
+        {
+            base.OnActionExecuting(context);
+
+            if (User.Identity.IsAuthenticated)
+            {
+                var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+                var user = _userManager.FindByIdAsync(userId).Result; // Utilisation de .Result car OnActionExecuting n'est pas async
+                if (user != null && !string.IsNullOrEmpty(user.ProfilePicture))
+                {
+                    ViewData["UserProfilePicture"] = user.ProfilePicture; // Chemin relatif de l'image
+                }
+                else
+                {
+                    ViewData["UserProfilePicture"] = "~/images/logo_profil.png"; // Chemin de l'image par défaut
+                }
+            }
         }
 
         public async Task<IActionResult> GetProfile()
@@ -64,14 +85,6 @@ namespace WebApplication1.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> UpdateProfile(UpdateProfileViewModel model, IFormFile profileImage)
         {
-            // Supprimer les erreurs de validation des champs de mot de passe si pas de nouveau mot de passe
-            if (string.IsNullOrEmpty(model.NewPassword))
-            {
-                ModelState.Remove("NewPassword");
-                ModelState.Remove("ConfirmNewPassword");
-                ModelState.Remove("CurrentPassword");
-            }
-
             if (!ModelState.IsValid)
             {
                 return View(model);
@@ -79,7 +92,7 @@ namespace WebApplication1.Controllers
 
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
             var user = await _userManager.FindByIdAsync(userId);
-            
+
             if (user == null)
             {
                 ModelState.AddModelError("", "Utilisateur non trouvé");
@@ -94,37 +107,33 @@ namespace WebApplication1.Controllers
             // Gestion de l'upload d'image de profil
             if (profileImage != null && profileImage.Length > 0)
             {
-                using var memoryStream = new MemoryStream();
-                await profileImage.CopyToAsync(memoryStream);
-                user.ProfilePicture = Convert.ToBase64String(memoryStream.ToArray());
-            }
+                var fileName = $"{Guid.NewGuid()}{Path.GetExtension(profileImage.FileName)}";
+                var filePath = Path.Combine("wwwroot/uploads", fileName);
 
-            // Gestion du changement de mot de passe
-            if (!string.IsNullOrEmpty(model.NewPassword))
-            {
-                if (string.IsNullOrEmpty(model.CurrentPassword))
+                // Créez le dossier si nécessaire
+                Directory.CreateDirectory(Path.GetDirectoryName(filePath));
+
+                // Enregistrez l'image sur disque
+                using (var stream = new FileStream(filePath, FileMode.Create))
                 {
-                    ModelState.AddModelError("CurrentPassword", "Le mot de passe actuel est requis pour changer le mot de passe");
-                    return View(model);
+                    await profileImage.CopyToAsync(stream);
                 }
 
-                if (string.IsNullOrEmpty(model.ConfirmNewPassword) || model.NewPassword != model.ConfirmNewPassword)
+                // Supprimez l'ancienne image si nécessaire
+                if (!string.IsNullOrEmpty(user.ProfilePicture))
                 {
-                    ModelState.AddModelError("ConfirmNewPassword", "Les mots de passe ne correspondent pas");
-                    return View(model);
-                }
-
-                var changePasswordResult = await _userManager.ChangePasswordAsync(user, model.CurrentPassword, model.NewPassword);
-                if (!changePasswordResult.Succeeded)
-                {
-                    foreach (var error in changePasswordResult.Errors)
+                    var oldImagePath = Path.Combine("wwwroot", user.ProfilePicture.TrimStart('/'));
+                    if (System.IO.File.Exists(oldImagePath))
                     {
-                        ModelState.AddModelError("", error.Description);
+                        System.IO.File.Delete(oldImagePath);
                     }
-                    return View(model);
                 }
+
+                // Enregistrez le chemin relatif dans la base de données
+                user.ProfilePicture = $"/uploads/{fileName}";
             }
 
+            // Sauvegarde des changements
             var result = await _userManager.UpdateAsync(user);
             if (result.Succeeded)
             {

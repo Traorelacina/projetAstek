@@ -4,68 +4,192 @@
     ViewData["Title"] = "Mes Notifications";
 }
 
-<h2>Notifications</h2>
+<style>
+    /* Styles améliorés pour les notifications */
+    :root {
+        --primary-color: #4299e1;
+        --hover-color: #3182ce;
+        --bg-color: #f7fafc;
+        --text-color: #2d3748;
+        --subtext-color: #4a5568;
+        --border-radius: 8px;
+        --transition-speed: 0.3s;
+    }
 
-@if (Model != null && Model.Any())
-{
-    <ul id="notifications-list" class="list-group mb-4">
-        @foreach (var notification in Model)
-        {
-            <li class="list-group-item">
-                <p>@notification.Message</p>
-                <small class="text-muted">@notification.CreatedAt.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</small>
-            </li>
-        }
-    </ul>
-}
-else
-{
-    <p class="text-muted">Aucune notification pour le moment.</p>
-}
+    .notification-page {
+        max-width: 900px;
+        margin: 2rem auto;
+        padding: 1rem;
+        font-family: 'Arial', sans-serif;
+    }
+
+    h2 {
+        font-size: 2rem;
+        font-weight: 700;
+        color: var(--text-color);
+        margin-bottom: 1.5rem;
+    }
+
+    #notifications-list {
+        list-style-type: none;
+        padding: 0;
+    }
+
+    .list-group-item {
+        background-color: #ffffff;
+        border: 1px solid #ddd;
+        border-radius: var(--border-radius);
+        margin-bottom: 1rem;
+        padding: 1.2rem;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        transition: background-color var(--transition-speed), box-shadow var(--transition-speed);
+        cursor: pointer;
+    }
+
+    .list-group-item:hover {
+        background-color: var(--bg-color);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    }
+
+    .list-group-item p {
+        font-size: 1.1rem;
+        color: var(--text-color);
+        margin-bottom: 0.5rem;
+    }
+
+    .list-group-item small {
+        font-size: 0.9rem;
+        color: var(--subtext-color);
+    }
+
+    .no-notifications {
+        text-align: center;
+        color: var(--subtext-color);
+        font-size: 1.2rem;
+    }
+
+    .new-notification {
+        background-color: #e3f2fd;
+        border-left: 5px solid var(--primary-color);
+        font-weight: bold;
+    }
+</style>
+
+<div class="notification-page">
+    <h2>Notifications</h2>
+
+    @if (Model != null && Model.Any())
+    {
+        <ul id="notifications-list">
+            @foreach (var notification in Model)
+            {
+                <li class="list-group-item @(notification.IsRead ? "" : "new-notification")" 
+                    data-id="@notification.Id" 
+                    data-link="@notification.Link">
+                    <p>@notification.Message</p>
+                    <small class="text-muted">@notification.CreatedAt.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</small>
+                </li>
+            }
+        </ul>
+    }
+    else
+    {
+        <p class="no-notifications">Aucune notification pour le moment.</p>
+    }
+</div>
 
 @section Scripts {
     <!-- Inclure SignalR -->
-    <script src="~/lib/signalr/signalr.min.js"></script> 
-    
+    <script src="~/lib/signalr/signalr.min.js"></script>
+
     <script>
-        // Initialisation de la connexion SignalR
-        const connection = new signalR.HubConnectionBuilder()
-            .withUrl("/notificationHub")
-            .configureLogging(signalR.LogLevel.Information)
-            .build();
+        document.addEventListener("DOMContentLoaded", function () {
+            const notificationItems = document.querySelectorAll("#notifications-list .list-group-item");
 
-        // Fonction pour afficher les nouvelles notifications
-        connection.on("ReceiveNotification", function (message) {
-            const list = document.getElementById("notifications-list");
+            // Fonction pour marquer une notification comme lue
+            async function markAsRead(item) {
+                const notificationId = item.dataset.id;
+                const notificationLink = item.dataset.link;
 
-            if (list) {
-                const newItem = document.createElement("li");
-                newItem.classList.add("list-group-item");
-                newItem.innerHTML = `<p>${message}</p><small class="text-muted">${new Date().toLocaleString()}</small>`;
-                
-                // Ajouter la nouvelle notification en haut de la liste
-                list.prepend(newItem);
+                try {
+                    const response = await fetch('/Notifications/MarkAsRead', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'RequestVerificationToken': '@ViewData["AntiforgeryToken"]' // Correction pour CSRF
+                        },
+                        body: JSON.stringify({ notificationId })
+                    });
+
+                    if (response.ok) {
+                        // Supprime la classe pour marquer visuellement la notification comme lue
+                        item.classList.remove("new-notification");
+
+                        // Redirige vers le lien associé
+                        
+                        window.location.href = notificationLink;
+                    } else {
+                        console.error("Échec de la mise à jour de la notification");
+                    }
+                } catch (error) {
+                    console.error("Erreur lors de la mise à jour de la notification :", error);
+                }
             }
-        });
 
-        // Démarrer la connexion
-        async function startConnection() {
-            try {
-                await connection.start();
-                console.log("Connexion SignalR établie");
-            } catch (err) {
-                console.error("Erreur lors de la connexion à SignalR : ", err);
-                setTimeout(startConnection, 5000); // Tenter de se reconnecter après 5 secondes
+            // Associe l'événement de clic aux notifications
+            notificationItems.forEach(item => {
+                item.addEventListener("click", function () {
+                    markAsRead(this);
+                });
+            });
+
+            // Configuration de SignalR
+            const connection = new signalR.HubConnectionBuilder()
+                .withUrl("/notificationHub")
+                .configureLogging(signalR.LogLevel.Information)
+                .build();
+
+            // Réception d'une nouvelle notification en temps réel
+            connection.on("ReceiveNotification", function (message, link) {
+                const list = document.getElementById("notifications-list");
+
+                if (list) {
+                    const newItem = document.createElement("li");
+                    newItem.className = "list-group-item new-notification";
+                    newItem.dataset.id = ""; // Remplir dynamiquement si nécessaire
+                    newItem.dataset.link = link;
+                    newItem.innerHTML = `
+                        <p>${message}</p>
+                        <small class="text-muted">${new Date().toLocaleString()}</small>
+                    `;
+
+                    list.prepend(newItem);
+
+                    // Réattribue l'événement de clic à l'élément ajouté
+                    newItem.addEventListener("click", function () {
+                        markAsRead(this);
+                    });
+                }
+            });
+
+            // Démarrage de la connexion SignalR
+            async function startSignalR() {
+                try {
+                    await connection.start();
+                    console.log("SignalR connecté");
+                } catch (err) {
+                    console.error("Erreur SignalR : ", err);
+                    setTimeout(startSignalR, 5000);
+                }
             }
-        }
 
-        // Lancer la connexion
-        startConnection();
+            startSignalR();
 
-        // Gérer la reconnexion en cas de déconnexion
-        connection.onclose(async () => {
-            console.warn("Connexion SignalR perdue. Tentative de reconnexion...");
-            await startConnection();
+            // Tentative de reconnexion en cas de déconnexion
+            connection.onclose(async () => {
+                console.warn("SignalR déconnecté. Reconnexion...");
+                await startSignalR();
+            });
         });
     </script>
 }

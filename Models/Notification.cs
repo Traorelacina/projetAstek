@@ -14,5 +14,9 @@ namespace WebApplication1.Models
         public DateTime CreatedAt { get; set; } // La date de la notification
         public string Type { get; set; } // Type de la notification (ex. Commentaire, Like)
         public bool IsRead { get; set; } = false;
+
+        public string UserFirstName { get; set; }
+        public string UserLastName { get; set; }
+        public string Link { get; set; }
     }
 }

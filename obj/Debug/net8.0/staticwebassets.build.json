@@ -1,6 +1,6 @@
 {
   "Version": 1,
-  "Hash": "IXS4CM5bDWlFPj1HJy8Qf5vMjIvjSge4CX83Dj0OFRs=",
+  "Hash": "IbVpLI/3BNSLnOqYZh1Y7uTp2+EHR/nSIM5/Xe9um9I=",
   "Source": "WebApplication1",
   "BasePath": "_content/WebApplication1",
   "Mode": "Default",
@@ -53,6 +53,25 @@
       "CopyToOutputDirectory": "Never",
       "CopyToPublishDirectory": "PreserveNewest",
       "OriginalItemSpec": "C:\\Users\\USER\\Desktop\\projet informatique\\bag\\WebApplication1\\obj\\Debug\\net8.0\\scopedcss\\projectbundle\\WebApplication1.bundle.scp.css"
+    },
+    {
+      "Identity": "C:\\Users\\USER\\Desktop\\projet informatique\\bag\\WebApplication1\\wwwroot\\css\\affichage.css",
+      "SourceId": "WebApplication1",
+      "SourceType": "Discovered",
+      "ContentRoot": "C:\\Users\\USER\\Desktop\\projet informatique\\bag\\WebApplication1\\wwwroot\\",
+      "BasePath": "_content/WebApplication1",
+      "RelativePath": "css/affichage.css",
+      "AssetKind": "All",
+      "AssetMode": "All",
+      "AssetRole": "Primary",
+      "AssetMergeBehavior": "PreferTarget",
+      "AssetMergeSource": "",
+      "RelatedAsset": "",
+      "AssetTraitName": "",
+      "AssetTraitValue": "",
+      "CopyToOutputDirectory": "Never",
+      "CopyToPublishDirectory": "PreserveNewest",
+      "OriginalItemSpec": "wwwroot\\css\\affichage.css"
     },
     {
       "Identity": "C:\\Users\\USER\\Desktop\\projet informatique\\bag\\WebApplication1\\wwwroot\\css\\dashboard.css",
@@ -1499,6 +1518,25 @@
       "OriginalItemSpec": "wwwroot\\uploads\\dcc6cb1c-0b0b-4f2d-9966-599ab1de44ca_lamigyd8s80plyp.png"
     },
     {
+      "Identity": "C:\\Users\\USER\\Desktop\\projet informatique\\bag\\WebApplication1\\wwwroot\\uploads\\df038331-2aef-4b75-9ef8-3e57374ee632.jpeg",
+      "SourceId": "WebApplication1",
+      "SourceType": "Discovered",
+      "ContentRoot": "C:\\Users\\USER\\Desktop\\projet informatique\\bag\\WebApplication1\\wwwroot\\",
+      "BasePath": "_content/WebApplication1",
+      "RelativePath": "uploads/df038331-2aef-4b75-9ef8-3e57374ee632.jpeg",
+      "AssetKind": "All",
+      "AssetMode": "All",
+      "AssetRole": "Primary",
+      "AssetMergeBehavior": "PreferTarget",
+      "AssetMergeSource": "",
+      "RelatedAsset": "",
+      "AssetTraitName": "",
+      "AssetTraitValue": "",
+      "CopyToOutputDirectory": "Never",
+      "CopyToPublishDirectory": "PreserveNewest",
+      "OriginalItemSpec": "wwwroot\\uploads\\df038331-2aef-4b75-9ef8-3e57374ee632.jpeg"
+    },
+    {
       "Identity": "C:\\Users\\USER\\Desktop\\projet informatique\\bag\\WebApplication1\\wwwroot\\uploads\\f2ce55bd-650c-42e5-82b2-4ef39e50ea34_Abanan.jpeg",
       "SourceId": "WebApplication1",
       "SourceType": "Discovered",
@@ -1516,6 +1554,25 @@
       "CopyToOutputDirectory": "Never",
       "CopyToPublishDirectory": "PreserveNewest",
       "OriginalItemSpec": "wwwroot\\uploads\\f2ce55bd-650c-42e5-82b2-4ef39e50ea34_Abanan.jpeg"
+    },
+    {
+      "Identity": "C:\\Users\\USER\\Desktop\\projet informatique\\bag\\WebApplication1\\wwwroot\\wwwroot - Raccourci.lnk",
+      "SourceId": "WebApplication1",
+      "SourceType": "Discovered",
+      "ContentRoot": "C:\\Users\\USER\\Desktop\\projet informatique\\bag\\WebApplication1\\wwwroot\\",
+      "BasePath": "_content/WebApplication1",
+      "RelativePath": "wwwroot - Raccourci.lnk",
+      "AssetKind": "All",
+      "AssetMode": "All",
+      "AssetRole": "Primary",
+      "AssetMergeBehavior": "PreferTarget",
+      "AssetMergeSource": "",
+      "RelatedAsset": "",
+      "AssetTraitName": "",
+      "AssetTraitValue": "",
+      "CopyToOutputDirectory": "Never",
+      "CopyToPublishDirectory": "PreserveNewest",
+      "OriginalItemSpec": "wwwroot\\wwwroot - Raccourci.lnk"
     }
   ]
 }
